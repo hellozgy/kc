@@ -26,8 +26,8 @@ del test[COMMENT]
 test.to_csv(test_label, header=False, index=False, encoding='utf-8')
 
 #2.去除不可见字符，将中文标点转化为英文标点
-moses_dir = 'd:/git/mosesdecoder-master/scripts/tokenizer'
-# moses_dir = '/home/zgy/git/mosesdecoder-master/scripts/tokenizer'
+# moses_dir = 'd:/git/mosesdecoder-master/scripts/tokenizer'
+moses_dir = '/home/zgy/git/mosesdecoder-master/scripts/tokenizer'
 cmd = 'cat ../input/train_oneline.csv | perl {}/remove-non-printing-char.perl | perl {}/replace-unicode-punctuation.perl > ' \
       '../input/train_oneline_moses.csv'.format(moses_dir, moses_dir)
 os.system(cmd)
@@ -46,6 +46,7 @@ def filter(src, dst):
     for line in f.readlines():
         line = line.strip(f'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])')
         line = re.sub(fr'([{string.punctuation}])+', r'\1', line)
+        line = ' '.join(line.split())
         fw.write(line.strip()+'\n')
         fw.flush()
     f.close()
