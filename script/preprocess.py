@@ -44,9 +44,21 @@ def filter(src, dst):
     f = open(src, 'r', encoding='utf-8')
     fw = open(dst, 'w', encoding='utf-8')
     for line in f.readlines():
+        line = line.strip().lower()
+        line = re.sub(r'\d', '', line)
+        line = re.sub(r'(.)\1{3,}', r'\1', line)
+        line = re.sub(r'(..)\1{2,}', r'\1', line)
+        line = re.sub(r'(...)\1{2,}', r'\1', line)
+        line = re.sub(r'(....)\1{1,}', r'\1', line)
+        line = re.sub(r'(.....)\1{1,}', r'\1', line)
+        line = re.sub(r'(......)\1{1,}', r'\1', line)
+        line = re.sub(r'(.......)\1{1,}', r'\1', line)
+        line = re.sub(r'(........)\1{1,}', r'\1', line)
+        line = re.sub(r'(.........)\1{1,}', r'\1', line)
         line = line.strip(f'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])')
-        line = re.sub(fr'([{string.punctuation}])+', r'\1', line)
-        line = ' '.join(line.split())
+        line = re.sub(fr'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])+', r'\1', line)
+        line = re.sub(r'([!"#$%&\()*+,-./:;<=>?@[\]^_`{|}~“”¨«»®´·º½¾¿¡§£₤‘])\1*', r' \1 ', line)
+        line = re.sub('\\s+', ' ', line)
         fw.write(line.strip()+'\n')
         fw.flush()
     f.close()
@@ -70,4 +82,26 @@ cmd = "java edu.stanford.nlp.process.PTBTokenizer -preserveLines " \
       "< ../input/{}_oneline_moses_punc.csv > ../input/{}_data.csv"
 os.system(cmd.format('train', 'train'))
 os.system(cmd.format('test', 'test'))
+
+#5. BPE子字
+subword_path = '/home/zgy/git/subword-nmt'
+cmd = 'python {}/learn_joint_bpe_and_vocab.py --input ../input/train_data.csv ../input/test_data.csv ' \
+      '-s 50000 -o ../input/train_test.codes --write-vocabulary ../input/train.vocab ../input/test.vocab'.format(subword_path)
+os.system(cmd)
+cmd = 'python {}/apply_bpe.py -c ../input/train_test.codes --vocabulary ../input/train.vocab ' \
+      '--vocabulary-threshold 5 -s "" < ../input/train_data.csv > ../input/train_data_bpe.csv'.format(subword_path)
+os.system(cmd)
+cmd = 'python {}/apply_bpe.py -c ../input/train_test.codes --vocabulary ../input/test.vocab ' \
+      '--vocabulary-threshold 5 -s ""  < ../input/test_data.csv > ../input/test_data_bpe.csv'.format(subword_path)
+os.system(cmd)
+cmd = 'rm ../input/train_test.codes ../input/train.vocab ../input/test.vocab'
+os.system(cmd)
+
+
+
+
+
+
+
+
 
