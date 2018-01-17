@@ -1,15 +1,24 @@
+import os
+
+base_dir = os.path.abspath(os.path.dirname(__file__) + '/input')
 
 class Config():
     ngpu = -1  # 指定gpu
-    model = None
-    max_len = 30
+    model = 'BasicModule'
+    max_len = 100
+    embeds_size = 300
+    hidden_size = 256
     dropout = 0.
-    eval_iter = 1000  # 评估模型
-    batch_size = 128
+    log_iter = 100
+    batch_size = 64
     epochs = 10
     lr = 1e-3
     limit_lr = 1e-6
     restore_file = None
+    vocab_size = -1
+    num_classes = 6
+    save_model = False
+    embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
 
     def parse(self, args):
         for k, v in args.items():
@@ -24,9 +33,8 @@ class Config():
 
     def parseopt(self, opt):
         keys = [k for k in dir(opt) if not k.startswith('_') and not k.startswith('parse')
-                and not k.startswith('show') and k not in set(['ngpu', 'id', 'beam_size', 'alpha', 'beta', 'restore_file'])]
+                and not k.startswith('show') and k not in set(['ngpu', 'id', 'restore_file'])]
         for key in keys:
             setattr(self, key, getattr(opt, key))
-
 
 opt = Config()
