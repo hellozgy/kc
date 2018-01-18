@@ -2,6 +2,7 @@
 
 import pandas as pd
 import re, string, os
+import unicodedata
 import ipdb
 
 # 1.将数据标签分开，并将内容转化为一行
@@ -45,7 +46,9 @@ def filter(src, dst):
     fw = open(dst, 'w', encoding='utf-8')
     for line in f.readlines():
         line = line.strip().lower()
-        line = re.sub(r'\d', '', line)
+        line = unicodedata.normalize('NFKC', line)
+        line = re.sub(rf'([^{string.punctuation}a-zA-Z])', ' ', line) # 仅保留标点和字母
+        line = re.sub(r'[#$%+=~^|]', '', line) # '#'作为句子之间的分隔符
         line = re.sub(r'(.)\1{3,}', r'\1', line)
         line = re.sub(r'(..)\1{2,}', r'\1', line)
         line = re.sub(r'(...)\1{2,}', r'\1', line)
@@ -56,8 +59,9 @@ def filter(src, dst):
         line = re.sub(r'(........)\1{1,}', r'\1', line)
         line = re.sub(r'(.........)\1{1,}', r'\1', line)
         line = line.strip(f'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])')
-        line = re.sub(fr'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])+', r'\1', line)
-        line = re.sub(r'([!"#$%&\()*+,-./:;<=>?@[\]^_`{|}~“”¨«»®´·º½¾¿¡§£₤‘])\1*', r' \1 ', line)
+        line = re.sub(fr'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])\1*', r'\1', line)
+        # line = re.sub(r'([!"#$%&\()*+,-./:;<=>?@[\]^_`{|}~“”¨«»®´·º½¾¿¡§£₤‘])\1*', r' \1 ', line)
+        line = re.sub(r'([!"&(),-:;<>?[\]_{}])\1*', r' \1 ', line)
         line = re.sub('\\s+', ' ', line)
         fw.write(line.strip()+'\n')
         fw.flush()
