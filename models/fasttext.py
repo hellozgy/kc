@@ -11,7 +11,7 @@ from .BasicModule import BasicModule
 class FastText(BasicModule):
     """pytorch实现的简单fasttext分类"""
     def __init__(self, opt):
-        super(FastText, self).__init__()
+        super(FastText, self).__init__(opt)
         self.opt = opt
 
 
