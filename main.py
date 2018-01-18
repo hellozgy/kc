@@ -17,8 +17,8 @@ def train(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model
     assert opt.ngpu >= 0
-    train_data = KCDataset('docs_bpe.npz', ['train', 'test'], opt.max_len)
-    val_data = KCDataset('docs_bpe.npz', ['val'], opt.max_len)
+    train_data = KCDataset('docs_bpe.npz', ['train', 'val'], opt.max_len)
+    test_data = KCDataset('docs_bpe.npz', ['test'], opt.max_len)
     opt.vocab_size = train_data.vocab_size
     model = getattr(models, opt.model)(opt)
     restore_file = './checkpoints/{}/{}'.format(opt.model,
@@ -59,9 +59,9 @@ def train(**kwargs):
                 print('epoch:{}-batch:{}-loss:{}'.format(epoch, batch, loss / opt.log_iter))
                 loss = 0
 
-        min_loss, checkpoint_id = eval(val_data, opt, model, min_loss, checkpoint_id, epoch)
+        min_loss, checkpoint_id = test(test_data, opt, model, min_loss, checkpoint_id, epoch)
 
-def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
+def test(dataset, opt, model, min_loss, checkpoint_id, epoch):
     dataloader = data.DataLoader(
         dataset=dataset, batch_size=opt.batch_size,
         shuffle=False, num_workers=1, drop_last=False)
