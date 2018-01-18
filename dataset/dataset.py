@@ -7,24 +7,25 @@ from dataset.Constants import PAD_INDEX
 
 base_dir = os.path.abspath(os.path.dirname(__file__)+'./../input/')
 class KCDataset(data.Dataset):
-    def __init__(self, file, tag, max_len):
+    def __init__(self, file, tags, max_len):
         '''
-        :param tag: train,val,test,commit
+        :param tag: a list of train,val,test,commit
         :param max_len:
         '''
-        self.tag = tag
+        self.tags = tags
         self.max_len = max_len
         npdata = np.load(os.path.join(base_dir, file))
         self.vocab_size = int(npdata['vocab_size'])
-        doc = npdata['docs'].item()[tag]
-        self.data = np.asarray([(d + [PAD_INDEX] * (self.max_len - len(d)))[: max_len] for d in doc[0]])
-        self.label = doc[1][:,1:] if self.tag!='commit' else doc[1]
+        datas = [npdata['docs'].item()[tag][0] for tag in tags]
+        labels = np.row_stack([npdata['docs'].item()[tag][1] for tag in tags])
+        self.datas = np.asarray([(d + [PAD_INDEX] * (self.max_len - len(d)))[: max_len] for data in datas for d in data])
+        self.labels = labels[:,1:] if 'commit' not in tags else labels
 
     def __getitem__(self, index):
-        return (self.data[index], self.label[index])
+        return (self.datas[index], self.labels[index])
 
     def __len__(self):
-        return self.data.shape[0]
+        return self.datas.shape[0]
 
 if __name__ == '__main__':
     ds = KCDataset('docs_bpe.npz', 'train', max_len=100)

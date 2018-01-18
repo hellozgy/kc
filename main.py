@@ -17,9 +17,8 @@ def train(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model
     assert opt.ngpu >= 0
-    train_data = KCDataset('docs_bpe.npz', 'train', opt.max_len)
-    val_data = KCDataset('docs_bpe.npz', 'val', opt.max_len)
-    # test_data = KCDataset('docs_bpe.npz', 'test', opt.max_len)
+    train_data = KCDataset('docs_bpe.npz', ['train', 'test'], opt.max_len)
+    val_data = KCDataset('docs_bpe.npz', ['val'], opt.max_len)
     opt.vocab_size = train_data.vocab_size
     model = getattr(models, opt.model)(opt)
     restore_file = './checkpoints/{}/{}'.format(opt.model,
