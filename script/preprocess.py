@@ -47,8 +47,9 @@ def filter(src, dst):
     for line in f.readlines():
         line = line.strip().lower()
         line = unicodedata.normalize('NFKC', line)
+        line = re.sub(r'\d', '', line)
         line = re.sub(rf'([^{string.punctuation}a-zA-Z])', ' ', line) # 仅保留标点和字母
-        line = re.sub(r'[#$%+=~^|]', '', line) # '#'作为句子之间的分隔符
+        line = re.sub(r'[#$%+=~^|@_/]', ' ', line) # '#'作为句子之间的分隔符
         line = re.sub(r'(.)\1{3,}', r'\1', line)
         line = re.sub(r'(..)\1{2,}', r'\1', line)
         line = re.sub(r'(...)\1{2,}', r'\1', line)
@@ -61,9 +62,9 @@ def filter(src, dst):
         line = line.strip(f'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])')
         line = re.sub(fr'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])\1*', r'\1', line)
         # line = re.sub(r'([!"#$%&\()*+,-./:;<=>?@[\]^_`{|}~“”¨«»®´·º½¾¿¡§£₤‘])\1*', r' \1 ', line)
-        line = re.sub(r'([!"&(),\-:;<>?[\]_{}])\1*', r' \1 ', line)
-        line = re.sub('\\s+', ' ', line)
-        fw.write(line.strip()+'\n')
+        line = re.sub(r'([^*a-zA-Z])\1*', r' \1 ', line)
+        line = re.sub('\\s+', ' ', line).strip()
+        fw.write((line if len(line)>0 else 'unknown')+'\n')
         fw.flush()
     f.close()
     fw.close()
