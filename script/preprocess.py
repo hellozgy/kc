@@ -61,7 +61,7 @@ def filter(src, dst):
         line = line.strip(f'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])')
         line = re.sub(fr'([{string.punctuation}“”¨«»®´·º½¾¿¡§£₤‘’ \n])\1*', r'\1', line)
         # line = re.sub(r'([!"#$%&\()*+,-./:;<=>?@[\]^_`{|}~“”¨«»®´·º½¾¿¡§£₤‘])\1*', r' \1 ', line)
-        line = re.sub(r'([!"&(),-:;<>?[\]_{}])\1*', r' \1 ', line)
+        line = re.sub(r'([!"&(),\-:;<>?[\]_{}])\1*', r' \1 ', line)
         line = re.sub('\\s+', ' ', line)
         fw.write(line.strip()+'\n')
         fw.flush()
