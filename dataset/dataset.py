@@ -5,7 +5,9 @@ import ipdb
 import numpy as np
 from dataset.Constants import PAD_INDEX
 
-base_dir = os.path.abspath(os.path.dirname(__file__)+'./../input/')
+base_dir = os.path.abspath(os.path.dirname(__file__) + './../input/')
+
+
 class KCDataset(data.Dataset):
     def __init__(self, file, tag, max_len):
         '''
@@ -18,7 +20,7 @@ class KCDataset(data.Dataset):
         self.vocab_size = int(npdata['vocab_size'])
         doc = npdata['docs'].item()[tag]
         self.data = np.asarray([(d + [PAD_INDEX] * (self.max_len - len(d)))[: max_len] for d in doc[0]])
-        self.label = doc[1][:,1:] if self.tag!='commit' else doc[1]
+        self.label = doc[1][:, 1:] if self.tag != 'commit' else doc[1]
 
     def __getitem__(self, index):
         return (self.data[index], self.label[index])
@@ -26,7 +28,9 @@ class KCDataset(data.Dataset):
     def __len__(self):
         return self.data.shape[0]
 
+
 if __name__ == '__main__':
     ds = KCDataset('docs_bpe.npz', 'train', max_len=100)
-    for k,v in ds:
-        print(k);print(v)
+    for k, v in ds:
+        print(k);
+        print(v)
