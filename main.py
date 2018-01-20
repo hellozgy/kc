@@ -91,6 +91,7 @@ def test(dataset, opt, model, min_loss, checkpoint_id, epoch):
                         './checkpoints/{}/checkpoint_best'.format(opt.id))
     return min_loss, checkpoint_id+1
 
+
 if __name__ == '__main__':  
     import fire
     fire.Fire()

@@ -5,7 +5,9 @@ import ipdb
 import numpy as np
 from dataset.Constants import PAD_INDEX
 
-base_dir = os.path.abspath(os.path.dirname(__file__)+'./../input/')
+base_dir = os.path.abspath(os.path.dirname(__file__) + './../input/')
+
+
 class KCDataset(data.Dataset):
     def __init__(self, file, tags, max_len):
         '''
@@ -58,6 +60,7 @@ class KCDatasetSplitSentence(data.Dataset):
 
     def __len__(self):
         return self.datas.shape[0]
+
 
 if __name__ == '__main__':
     ds = KCDatasetSplitSentence('docs_bpe.npz', 'train', max_len=100)

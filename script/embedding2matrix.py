@@ -10,6 +10,7 @@ import Constants
 
 base_dir = os.path.abspath(os.path.dirname(__file__)+'./../input/')
 
+
 def embed2vec(embedding_file, vec_file):
     '''
     embedding ->numpy
@@ -22,6 +23,7 @@ def embed2vec(embedding_file, vec_file):
     word2id[Constants.PAD_WORD] = Constants.PAD_INDEX
     word2id[Constants.UNK_WORD] = Constants.UNK_INDEX
     np.savez_compressed(os.path.join(base_dir, vec_file),vector=vec,word2id=word2id)
+
 
 def word2id(vec_file, data_files, label_files, tags, res_file):
     word2id = np.load(os.path.join(base_dir, vec_file))['word2id'].item()
