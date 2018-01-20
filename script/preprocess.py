@@ -117,12 +117,3 @@ cmd = 'python {}/apply_bpe.py -c ../input/train_test.codes --vocabulary ../input
 os.system(cmd)
 cmd = 'rm ../input/train_test.codes ../input/train.vocab ../input/test.vocab'
 os.system(cmd)
-
-
-
-
-
-
-
-
-
