@@ -53,8 +53,6 @@ class KCDatasetSplitSentence(data.Dataset):
             datas = [[sent+[PAD_INDEX](max_word_persentence-len(sent)) for sent in doc] for doc in datas]
             self.datas = np.asarray(datas)
 
-
-
     def __getitem__(self, index):
         return (self.datas[index], self.labels[index])
 
