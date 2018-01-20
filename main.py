@@ -62,6 +62,7 @@ def train(**kwargs):
 
         min_loss, checkpoint_id = eval(val_data, opt, model, min_loss, checkpoint_id, epoch)
 
+
 def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
     dataloader = data.DataLoader(
         dataset=dataset, batch_size=opt.batch_size,
@@ -91,6 +92,7 @@ def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
             shutil.copy('./checkpoints/{}/checkpoint_last'.format(opt.id),
                         './checkpoints/{}/checkpoint_best'.format(opt.id))
     return min_loss, checkpoint_id+1
+
 
 if __name__ == '__main__':  
     import fire
