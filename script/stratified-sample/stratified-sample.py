@@ -237,6 +237,11 @@ if __name__ == '__main__':
         print('test data {} rate is {}'.format(col, np.sum(test_df[col] == 1) / len(test_df)))
         print('val data {} rate is {}'.format(col, np.sum(val_df[col] == 1) / len(val_df)))
 
+    print('保存这些原始的划分好的数据')
+    train_df.to_csv('./split-data/train_data_origin.csv', index=False)
+    test_df.to_csv('./split-data/test_data_origin.csv', index=False)
+    val_df.to_csv('./split-data/val_data_origin.csv', index=False)
+
     # 对现有的数据进行切分
     dataset = []
     with open(PATH + 'train_data_bpe.csv') as f:
@@ -258,6 +263,7 @@ if __name__ == '__main__':
     assert len(train_data) == len(train_label)
     assert len(test_data) == len(test_label)
     assert len(val_data) == len(val_label)
+    print('将这些划分好的train data,test data, val data 保存下来')
 
     save_file(train_data, 'train_data')
     save_file(test_data, 'test_data')
@@ -266,5 +272,8 @@ if __name__ == '__main__':
     save_file(train_label, 'train_label')
     save_file(test_label, 'test_label')
     save_file(val_label, 'val_label')
+
+    print('save train origin data')
+
 
 
