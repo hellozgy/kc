@@ -1,3 +1,0 @@
-1打开fasttext0.1.0文件夹，打开终端，运行
-
-./fasttext skipgram -input [data-path] -output [output-path] -dim 300 -thread [12] -loss [hs] -epoch [5]
