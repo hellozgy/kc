@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
 """实现出多标签的分层划分方法
 过程写的太乱，
 思路是计算每个label应该抽取的数目label_size,
@@ -13,8 +12,8 @@
 import pandas as pd
 import numpy as np
 
-
-data = pd.read_csv('../train.csv')
+PATH = '../../input/'
+data = pd.read_csv(PATH + 'train.csv')
 
 # 整个过程中，我要维持三张表
 data_index = np.arange(len(data))
@@ -23,9 +22,13 @@ val_index = []
 train_index = []
 
 data_size = len(data)
-train_size = len(data) - 20000
-test_size = 10000
-val_size = 10000
+train_size = int(0.8 * len(data))
+test_size = int(0.1 * len(data))
+val_size = int(0.1 * len(data))
+
+print('train data size', train_size)
+print('test data size', test_size)
+print("val data size", val_size)
 
 
 def get_label_index(df, col, cur_data_index):
@@ -198,7 +201,8 @@ def stratified_split_data(dataset):
     """
     按照上面步骤计算得到的index，讲数据集进行划分
     :param train: 数据格式要求是numpy格式
-    :return: (train data, test data, val data)
+    :param labels: label，数据格式要求是numpy格式
+    :return: train data, test data, val data, train label, test label, val label
     """
     # 转化成numpy格式
     if not isinstance(dataset, np.ndarray):
@@ -209,3 +213,58 @@ def stratified_split_data(dataset):
 
     # 返回结果
     return train_data, test_data, val_data
+
+
+# 写入函数
+def save_file(data, file_name):
+    path = './split-data/{}.csv'.format(file_name)
+    with open(path, 'w') as f:
+        for line in data:
+            f.writelines(line)
+    print(f'{file_name} write done!')
+
+
+if __name__ == '__main__':
+    # 对切分的情况进行下测试
+    data_df = pd.read_csv(PATH + 'train.csv')
+    train_df = data_df.loc[train_index, :]
+    test_df = data_df.loc[test_index, :]
+    val_df = data_df.loc[val_index, :]
+
+    for col in data_df.columns:
+        print(f'{col}的切分情况')
+        print('train data {} rate is {}'.format(col, np.sum(train_df[col] == 1) / len(train_df)))
+        print('test data {} rate is {}'.format(col, np.sum(test_df[col] == 1) / len(test_df)))
+        print('val data {} rate is {}'.format(col, np.sum(val_df[col] == 1) / len(val_df)))
+
+    # 对现有的数据进行切分
+    dataset = []
+    with open(PATH + 'train_data_bpe.csv') as f:
+        for line in f.readlines():
+            dataset.append(line)
+
+    dataset = np.asarray(dataset, dtype=str)
+    train_data, test_data, val_data = stratified_split_data(dataset)
+
+    # 对label进行切分
+    labels = []
+    with open(PATH + 'train_label.csv') as f:
+        for line in f.readlines():
+            labels.append(line)
+
+    labels = np.array(labels)
+    train_label, test_label, val_label = stratified_split_data(labels)
+
+    assert len(train_data) == len(train_label)
+    assert len(test_data) == len(test_label)
+    assert len(val_data) == len(val_label)
+
+    save_file(train_data, 'train_data')
+    save_file(test_data, 'test_data')
+    save_file(val_data, 'val_data')
+
+    save_file(train_label, 'train_label')
+    save_file(test_label, 'test_label')
+    save_file(val_label, 'val_label')
+
+
