@@ -19,6 +19,7 @@ class Config():
     num_classes = 6
     save_model = False
     embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
+    split_sentence = False
 
     def parse(self, args):
         for k, v in args.items():

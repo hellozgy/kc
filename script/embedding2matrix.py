@@ -33,7 +33,7 @@ def word2id(vec_file, data_files, label_files, tags, res_file):
         with open(os.path.join(base_dir,data_file), 'r', encoding='utf-8') as f:
             for i, line in enumerate(f):
                 data.append([word2id[word] for word in line.split() if word in word2id])
-        label= np.loadtxt(os.path.join(base_dir, label_file), delimiter=',')
+        label= np.loadtxt(os.path.join(base_dir, label_file), dtype=np.str, delimiter=',')
         docs[tag] = (data, label)
     np.savez_compressed(os.path.join(base_dir, res_file), docs=docs, vocab_size=len(word2id), word2id=word2id)
 
