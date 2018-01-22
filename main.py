@@ -55,16 +55,14 @@ def train(**kwargs):
             batch_loss.backward()
             optimizer.step()
             loss += batch_loss.data[0]
-            if batch % opt.log_iter == 0:
-                print('epoch:{}-batch:{}-loss:{}'.format(epoch, batch, loss / opt.log_iter))
-                loss = 0
+        print('epoch:{}-loss:{:,.5f}'.format(epoch, loss / batch))
 
         epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id, epoch)
         if epoch_loss <= min_loss:
             min_loss = epoch_loss
         else:
-            opt.lr = opt.lr * 0.2
-            optimizer = model.get_optimizer(opt.lr, lr2=opt.lr*0.5, weight_decay=2e-5)
+            opt.lr = opt.lr / 2
+            optimizer = model.get_optimizer(opt.lr, lr2=opt.lr / 2, weight_decay=2e-5)
 
 def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
     dataloader = data.DataLoader(
@@ -88,10 +86,6 @@ def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
     os.system('echo {} >> ./output/{}.txt'.format(msg, opt.id))
 
     if opt.save_model:
-        # torch.save({'model': model.state_dict(), 'checkpoint_id': checkpoint_id, 'loss': loss, 'opt': opt},
-        #            './checkpoints/{}/checkpoint{}'.format(opt.id, checkpoint_id))
-        # shutil.copy('./checkpoints/{}/checkpoint{}'.format(opt.id, checkpoint_id),
-        #             './checkpoints/{}/checkpoint_last'.format(opt.id))
         torch.save({'model': model.state_dict(), 'checkpoint_id': checkpoint_id, 'loss': loss, 'opt': opt},
                    './checkpoints/{}/checkpoint_last'.format(opt.id))
         if loss <= min_loss:
