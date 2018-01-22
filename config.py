@@ -5,6 +5,7 @@ base_dir = os.path.abspath(os.path.dirname(__file__) + '/input')
 class Config():
     ngpu = -1  # 指定gpu
     model = 'BasicModule'
+    id = None
     max_len = 100
     embeds_size = 300
     hidden_size = 256

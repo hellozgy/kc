@@ -7,4 +7,6 @@
 /.idea/
 /paper/*
 /input/*
+**/__pycache__
+**.pyc
 

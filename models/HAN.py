@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import ipdb
 
 class HAN(BasicModule):
-    def __init__(self, opt, word_layers=2, sent_layers=2):
+    def __init__(self, opt, word_layers=1, sent_layers=1):
         super(HAN, self).__init__(opt)
         self.vocab_size = opt.vocab_size
         assert self.vocab_size > 0
@@ -26,7 +26,8 @@ class HAN(BasicModule):
         self.fc_sent = nn.Linear(2*self.hidden_size, 2*self.hidden_size)
         self.query_word = nn.Parameter(torch.FloatTensor(2*self.hidden_size, 1))
         self.query_sent = nn.Parameter(torch.FloatTensor(2*self.hidden_size, 1))
-        nn.init
+        nn.init.xavier_normal(self.query_word)
+        nn.init.xavier_normal(self.query_sent)
 
         self.fc = nn.Sequential(
             nn.Linear(2 * self.hidden_size, self.hidden_size),
@@ -49,7 +50,7 @@ class HAN(BasicModule):
         mask = mask.float().masked_fill_(mask, -float('inf'))
         mask = mask.index_fill_(0, mask_sent.float().topk(int(torch.sum(mask_sent.float())))[1], 0)
         mask_sent = mask_sent.float().masked_fill_(mask_sent, -float('inf')).view(batch, max_sents)
-        sents, _ = self.word_encoder(self.embeds(words).permute(1, 0, 2))
+        sents, (ht,_) = self.word_encoder(self.embeds(words).permute(1, 0, 2))
         sents, _ = self.attention(sents, self.fc_word, self.query_word, Variable(mask))
         sents = sents.view(batch, max_sents, 2*self.hidden_size).permute(1, 0, 2)
         sents, _ = self.sent_encoder(sents)
@@ -58,6 +59,7 @@ class HAN(BasicModule):
         return output
 
     def attention(self, ctx, Ww, Uw, mask):
+        mask=0
         ctx = ctx.permute(1, 0, 2)
         u = F.tanh(Ww(ctx))
         score = F.softmax(u.matmul(Uw).squeeze(2)+mask, dim=1).unsqueeze(1)
