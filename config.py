@@ -15,6 +15,7 @@ class Config():
     epochs = 10
     lr = 1e-3
     limit_lr = 1e-6
+    restore = True
     restore_file = None
     vocab_size = -1
     num_classes = 6

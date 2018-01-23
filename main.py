@@ -9,6 +9,7 @@ import models
 import torch
 import shutil
 import datetime
+from torchnet import meter
 import ipdb
 
 torch.manual_seed(1)
@@ -28,7 +29,7 @@ def train(**kwargs):
     if not os.path.exists(save2path): os.system('mkdir -p {}'.format(save2path))
     min_loss = float('inf')
     checkpoint_id = 1
-    if os.path.exists(restore_file):
+    if os.path.exists(restore_file) and opt.restore:
         print('restore parameters from {}'.format(restore_file))
         model_file = torch.load(restore_file)
         opt.parseopt(model_file['opt'])
@@ -66,8 +67,8 @@ def train(**kwargs):
             optimizer = model.get_optimizer(opt.lr, lr2=opt.lr / 2, weight_decay=2e-5)
         last_loss = epoch_loss
 
-        msg = '{} epoch:{:,2d} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(
-            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), epoch, loss / batch, epoch_loss, min_loss, opt.lr)
+        msg = '{} epoch:{:>2} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(
+            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')), epoch, loss / batch, epoch_loss, min_loss, opt.lr)
         print(msg)
         os.system('echo {} >> ./checkpoints/{}/log.txt'.format(msg, opt.id))
 
@@ -79,14 +80,18 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     step = 0
     model.eval()
     loss_function = nn.BCELoss(size_average=True)
+    confusion_matrix = meter.ConfusionMeter(6)
+    confusion_matrix.reset()
     for content, label in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         label = Variable(label, volatile=True).float().cuda(opt.ngpu)
         predict = model(content)
+        confusion_matrix.add(predict.data, label.data)
         batch_loss = loss_function(predict, label)
         loss += batch_loss.data[0]
     model.train()
+    print(confusion_matrix.value())
     loss = loss / step
 
     if opt.save_model:
