@@ -9,4 +9,5 @@
 /input/*
 **/__pycache__
 **.pyc
+/temp/*
 

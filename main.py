@@ -8,6 +8,7 @@ from dataset import KCDataset
 import models
 import torch
 import shutil
+import datetime
 import ipdb
 
 torch.manual_seed(1)
@@ -42,6 +43,7 @@ def train(**kwargs):
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
     loss_function = nn.BCELoss(size_average=True)
+    last_loss = float('inf')
     for epoch in range(opt.epochs):
         loss = 0
         batch = 0
@@ -55,16 +57,21 @@ def train(**kwargs):
             batch_loss.backward()
             optimizer.step()
             loss += batch_loss.data[0]
-        print('epoch:{}-loss:{:,.5f}'.format(epoch, loss / batch))
 
-        epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id, epoch)
+        epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id)
         if epoch_loss <= min_loss:
             min_loss = epoch_loss
-        else:
+        elif epoch_loss > last_loss:
             opt.lr = opt.lr / 2
             optimizer = model.get_optimizer(opt.lr, lr2=opt.lr / 2, weight_decay=2e-5)
+        last_loss = epoch_loss
 
-def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
+        msg = '{} epoch:{:,2d} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(
+            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), epoch, loss / batch, epoch_loss, min_loss, opt.lr)
+        print(msg)
+        os.system('echo {} >> ./checkpoints/{}/log.txt'.format(msg, opt.id))
+
+def eval(dataset, opt, model, min_loss, checkpoint_id):
     dataloader = data.DataLoader(
         dataset=dataset, batch_size=opt.batch_size,
         shuffle=False, num_workers=1, drop_last=False)
@@ -81,18 +88,14 @@ def eval(dataset, opt, model, min_loss, checkpoint_id, epoch):
         loss += batch_loss.data[0]
     model.train()
     loss = loss / step
-    msg = 'eval:epoch:{}-loss:{:,.5f}-minloss:{:,.5f}'.format(epoch, loss, min_loss)
-    print(msg)
-    os.system('echo {} >> ./output/{}.txt'.format(msg, opt.id))
 
     if opt.save_model:
         torch.save({'model': model.state_dict(), 'checkpoint_id': checkpoint_id, 'loss': loss, 'opt': opt},
                    './checkpoints/{}/checkpoint_last'.format(opt.id))
         if loss <= min_loss:
-            min_loss = loss
             shutil.copy('./checkpoints/{}/checkpoint_last'.format(opt.id),
                         './checkpoints/{}/checkpoint_best'.format(opt.id))
-    return min_loss, checkpoint_id+1
+    return loss, checkpoint_id+1
 
 def test(**kwargs):
     opt.parse(kwargs)
@@ -114,7 +117,7 @@ def test(**kwargs):
     dataloader_train = data.DataLoader(
         dataset=test_data, batch_size=opt.batch_size,
         shuffle=False, num_workers=1, drop_last=False)
-    res_file = './output/res_{}.csv'.format(opt.id)
+    res_file = './checkpoints/{}/res.csv'.format(opt.id)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')
     for content, ids in dataloader_train:
