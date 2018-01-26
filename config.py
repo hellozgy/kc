@@ -29,7 +29,11 @@ class Config():
     filter_nums = [128, 128, 256, 256]
     model_type = 'multichannel'
     tune = False # 使用测试集微调
-
+    num_layers = 1
+    kmax_pooling = 3
+    linear_hidden_size = 2000
+    weight_decay = 2e-5
+    dropout_data = 0.7
 
     def parse(self, args):
         for k, v in args.items():
