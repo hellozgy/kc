@@ -95,7 +95,7 @@ class CNNText(nn.Module):
         conv_results = [conv(x) for conv in self.convs]
 
         x = torch.cat(conv_results, dim=1)
-        x = F.dropout(x, p=self.dropout)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
 

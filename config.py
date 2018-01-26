@@ -11,7 +11,7 @@ class Config():
     hidden_size = 256
     dropout = 0.5
     log_iter = 100
-    batch_size = 512
+    batch_size = 64
     epochs = 30
     lr = 1e-3
     limit_lr = 1e-6
@@ -28,6 +28,7 @@ class Config():
     filters = [2, 3, 4, 5]
     filter_nums = [128, 128, 256, 256]
     model_type = 'multichannel'
+    tune = False # 使用测试集微调
 
 
     def parse(self, args):

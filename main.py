@@ -40,7 +40,8 @@ def train(**kwargs):
         min_loss = float(model_file['loss'])
     model.cuda(opt.ngpu)
 
-    optimizer = model.get_optimizer(opt.lr, lr2=0, weight_decay=2e-5)
+    lr2 = 0
+    optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=2e-5)
     dataloader_train = data.DataLoader(
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
@@ -66,8 +67,10 @@ def train(**kwargs):
         if epoch_loss <= min_loss:
             min_loss = epoch_loss
         elif epoch_loss > last_loss:
-            opt.lr = opt.lr / 2
-            optimizer = model.get_optimizer(opt.lr, lr2=opt.lr / 2, weight_decay=2e-5)
+            opt.lr = opt.lr * 0.5
+            lr2 = 2e-4 if lr2 == 0 else lr2 * 0.8
+            model = model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
+            optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=2e-5)
         last_loss = epoch_loss
 
         msg = '{} epoch:{:>2} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(

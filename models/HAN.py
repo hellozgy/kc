@@ -42,10 +42,10 @@ class HAN(BasicModule):
 
         self.fc = nn.Sequential(
             nn.Linear(6 * self.hidden_size, self.hidden_size),
-            nn.BatchNorm1d(self.hidden_size),
+            # nn.BatchNorm1d(self.hidden_size),
             nn.Tanh(),
             nn.Linear(self.hidden_size, self.num_classes),
-            nn.BatchNorm1d(self.num_classes),
+            # nn.BatchNorm1d(self.num_classes),
             nn.Sigmoid()
         )
 
@@ -68,7 +68,6 @@ class HAN(BasicModule):
         sents, (ht,_) = self.word_encoder(words_embeds)
         ht = torch.cat([ht[-2], ht[-1]], dim=1) # (batch, 2*hidden_size)
         sents_attn, _ = self.attention_han(sents, self.fc_word, self.query_word, Variable(mask))
-        # sents_attn = sents_attn.view(batch, max_sents, 2*self.hidden_size).permute(1, 0, 2)
         sents_attn2, _ = self.attention(sents, ht, self.attn_Wa_word, self.attn_Va_word, self.attn_fc_word,  Variable(mask))
         sents = torch.cat([ht, sents_attn, sents_attn2], -1).view(batch, max_sents, 6*self.hidden_size).permute(1, 0, 2)
 
@@ -78,6 +77,7 @@ class HAN(BasicModule):
         sents_attn2, _ = self.attention(sents, ht, self.attn_Wa_sent, self.attn_Va_sent, self.attn_fc_sent,  Variable(mask_sent))
         sents = torch.cat([ht, sents_attn, sents_attn2], -1)
 
+        sents = F.dropout(sents, p=self.dropout, training=self.training)
         output = self.fc(sents)
         return output
 
@@ -105,7 +105,7 @@ class HAN(BasicModule):
         At = At + mask
         At = F.softmax(At, dim=1).unsqueeze(1)  # (batch_size,1, seqlen)
         attn = torch.bmm(At, ctx)[:,0,:]  # (batch_size,1, hidden_size)
-        attn = F.tanh(attn_fc(torch.cat([attn, residual], 1)))
+        attn = attn_fc(torch.cat([attn, residual], 1))
         return attn, At[:, 0, :]
 
 
