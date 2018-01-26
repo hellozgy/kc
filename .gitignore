@@ -1,5 +1,8 @@
 **.zip
 **.csv
+**.npz
+/input/
 !**/.gitkeep
 /.idea/
 /paper/*
+/script/fasttext/data/

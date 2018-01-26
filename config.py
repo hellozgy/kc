@@ -2,16 +2,19 @@ import os
 
 base_dir = os.path.abspath(os.path.dirname(__file__) + '/input')
 
+
 class Config():
-    ngpu = -1  # 指定gpu
-    model = 'BasicModule'
+    ngpu = 0  # 指定gpu
+    # model = 'FastText'
+    model = 'CNNText'
+    id = None
     max_len = 100
     embeds_size = 300
     hidden_size = 256
-    dropout = 0.
+    dropout = 0.5
     log_iter = 100
-    batch_size = 64
-    epochs = 10
+    batch_size = 512
+    epochs = 30
     lr = 1e-3
     limit_lr = 1e-6
     restore_file = None
@@ -19,6 +22,13 @@ class Config():
     num_classes = 6
     save_model = False
     embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
+    split_sentence = False
+
+    # CNNText 参数
+    filters = [2, 3, 4, 5]
+    filter_nums = [128, 128, 256, 256]
+    model_type = 'multichannel'
+
 
     def parse(self, args):
         for k, v in args.items():

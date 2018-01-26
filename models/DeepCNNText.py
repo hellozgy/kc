@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-import ipdb
 
 
 class CNNText(nn.Module):
@@ -42,38 +44,25 @@ class CNNText(nn.Module):
         print('load embedding')
         self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
 
-        if self.model_type == 'static' or 'multichannel':
-            self.embeds.weight.requires_grad = False
+        # if self.model_type == 'static' or 'multichannel':
+        #     self.embeds.weight.requires_grad = False
 
-        self.embedd2 = None
+        # self.embedd2 = None
+        #
+        # if self.model_type == 'multichannel':
+        #     self.in_channel = 2
+        #     print('loading embedding 2')
+        #     self.embedd2 = nn.Embedding(self.vocab_size, self.embeds_size)
+        #     self.embedd2.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
 
-        if self.model_type == 'multichannel':
-            self.in_channel = 2
-            print('loading embedding 2')
-            self.embedd2 = nn.Embedding(self.vocab_size, self.embeds_size)
-            self.embedd2.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
-
-        convs = [nn.Sequential(
-            nn.Conv1d(in_channels=self.embeds_size * self.in_channel,
-                      out_channels=self.filter_nums[i],
-                      kernel_size=self.filters[i]),
-            nn.BatchNorm1d(self.filter_nums[i]),
-            nn.ReLU(inplace=True),
-
-            nn.Conv1d(in_channels=self.filter_nums[i],
-                      out_channels=self.filter_nums[i],
-                      kernel_size=self.filters[i]),
-            nn.BatchNorm1d(self.filter_nums[i]),
-            nn.ReLU(inplace=True),
-
-            nn.MaxPool1d(kernel_size=self.max_len - self.filters[i] * 2 + 2)
-        ) for i in range(len(self.filters))]
-
-        self.convs = nn.ModuleList(convs)
+        # conv层
+        for i in range(len(self.filters)):
+            conv = nn.Conv1d(in_channels=self.in_channel, out_channels=self.filter_nums[i],
+                             kernel_size=self.embeds_size * self.filters[i], stride=self.embeds_size)
+            setattr(self, f'conv_{i}', conv)
 
         self.fc = nn.Sequential(
-            nn.Linear(sum(self.filter_nums),
-                      2 * self.hidden_size),
+            nn.Linear(sum(self.filter_nums), 2 * self.hidden_size),
             nn.BatchNorm1d(self.hidden_size * 2),
             nn.ReLU(inplace=True),
             nn.Linear(self.hidden_size * 2, self.num_classes),
@@ -85,30 +74,33 @@ class CNNText(nn.Module):
         return getattr(self, f'conv_{i}')
 
     def forward(self, inputs):
-        x = self.embeds(inputs).permute(0, 2, 1)
-        if self.model_type == 'multichannel':
-            x2 = self.embedd2(inputs).permute(0, 2, 1)
-            x = torch.cat((x, x2), dim=1)
+        x = self.embeds(inputs).view(-1, 1, self.embeds_size * self.max_len)
 
-        # ipdb.set_trace()
+        # if self.model_type == 'multichannel':
+        #     x2 = self.embedd2(inputs).view(-1, 1, self.embeds_size * self.max_len)
+        #     x = torch.cat((x, x2), dim=1)
 
-        conv_results = [conv(x) for conv in self.convs]
+        conv_results = [
+            F.max_pool1d(F.relu(self.get_conv(i)(x)),
+                         self.max_len - self.filters[i] + 1)
+            for i in range(len(self.filters))
+        ]
 
         x = torch.cat(conv_results, dim=1)
         x = F.dropout(x, p=self.dropout)
         x = x.view(x.size(0), -1)
+        # print(x.size())
         x = self.fc(x)
-
         return x
 
     def get_optimizer(self, lr=1e-3, lr2=0, weight_decay=0):
-        ignored_params = list(map(id, self.embedd2.parameters())) + list(map(id, self.embeds.parameters()))
+        ignored_params = list(map(id, list(map(id, self.embeds.parameters()))))
 
         base_params = filter(lambda p: id(p) not in ignored_params,
                              self.parameters())
         optimizer = torch.optim.Adam([
             dict(params=base_params, weight_decay=weight_decay, lr=lr),
-            {'params': self.embedd2.parameters(), 'lr': lr}
+            {'params': self.embeds.parameters(), 'lr': lr}
         ])
         return optimizer
 

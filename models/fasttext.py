@@ -12,11 +12,14 @@ class FastText(nn.Module):
     def __init__(self, opt):
         super(FastText, self).__init__()
         self.opt = opt
-        self.model_name = 'fasttext'
+        self.model_name = 'FastText'
+        self.embeds_size = opt.embeds_size
         self.embeds = nn.Embedding(opt.vocab_size, opt.embeds_size)
+        self.hidden_size = opt.hidden_size
+        self.num_classes = opt.num_classes
 
         self.fc = nn.Sequential(
-            nn.Linear(2 * self.hidden_size, self.hidden_size),
+            nn.Linear(self.embeds_size, self.hidden_size),
             nn.BatchNorm1d(self.hidden_size),
             nn.Tanh(),
             nn.Linear(self.hidden_size, self.num_classes),
@@ -24,15 +27,23 @@ class FastText(nn.Module):
             nn.Sigmoid()
         )
 
-        if opt.embedding_path:
+        if opt.embeds_path:
             print('load embedding')
-            self.encoder.weight.data.copy_(torch.from_numpy(np.load(opt.embedding_path)['vector']))
+            self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
 
     def forward(self, content):
-        content = torch.mean(self.embeds(content), dim=1)
+        embeds_ctx = self.embeds(content)
+        content = torch.mean(embeds_ctx, 1)
+        content = content.view(content.size(0), -1)
         output = self.fc(content)
         return output
 
-    def get_optimizer(self, lr=1e-3):
-        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+    def get_optimizer(self, lr=1e-3, lr2=0, weight_decay=0):
+        ignored_params = list(map(id, self.embeds.parameters()))
+        base_params = filter(lambda p: id(p) not in ignored_params,
+                             self.parameters())
+        optimizer = torch.optim.Adam([
+            dict(params=base_params, weight_decay=weight_decay, lr=lr),
+            {'params': self.embeds.parameters(), 'lr': lr2}
+        ])
         return optimizer

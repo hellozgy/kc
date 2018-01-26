@@ -237,10 +237,6 @@ if __name__ == '__main__':
         print('test data {} rate is {}'.format(col, np.sum(test_df[col] == 1) / len(test_df)))
         print('val data {} rate is {}'.format(col, np.sum(val_df[col] == 1) / len(val_df)))
 
-    print('保存这些原始的划分好的数据')
-    train_df.to_csv('./split-data/train_data_origin.csv', index=False)
-    test_df.to_csv('./split-data/test_data_origin.csv', index=False)
-    val_df.to_csv('./split-data/val_data_origin.csv', index=False)
 
     # 对现有的数据进行切分
     dataset = []
@@ -265,15 +261,35 @@ if __name__ == '__main__':
     assert len(val_data) == len(val_label)
     print('将这些划分好的train data,test data, val data 保存下来')
 
-    save_file(train_data, 'train_data')
-    save_file(test_data, 'test_data')
-    save_file(val_data, 'val_data')
+    save_file(train_data, 'train_data_bpe')
+    save_file(test_data, 'test_data_bpe')
+    save_file(val_data, 'val_data_bpe')
 
     save_file(train_label, 'train_label')
     save_file(test_label, 'test_label')
     save_file(val_label, 'val_label')
 
-    print('save train origin data')
+    print('split train data')
+
+    train_origin_path = PATH + 'train_data.csv'
+
+    dataset_origin = []
+    with open(train_origin_path, 'r') as f:
+        for line in f.readlines():
+            dataset_origin.append(line)
+    dataset_origin = np.asarray(dataset_origin, dtype=str)
+
+    train_origin = dataset_origin[train_index]
+    test_origin = dataset_origin[test_index]
+    val_origin = dataset_origin[val_index]
+
+    save_file(train_origin, 'train_data')
+    save_file(test_origin, 'test_data')
+    save_file(val_origin, 'val_data')
+
+
+
+
 
 
 

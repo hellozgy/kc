@@ -17,7 +17,7 @@ class BasicModule(nn.Module):
         self.hidden_size = opt.hidden_size
         self.dropout = opt.dropout
         self.num_classes = opt.num_classes
-        self.embeds = nn.Embedding(self.vocab_size, self.embeds_size)
+        self.embeds = nn.Embedding(self.vocab_size, self.embeds_size, padding_idx=Constants.PAD_INDEX)
         if opt.embeds_path:
             self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
         self.encoder = nn.LSTM(self.embeds_size, self.hidden_size, bidirectional=True)
@@ -38,7 +38,14 @@ class BasicModule(nn.Module):
         output = self.fc(output)
         return output
 
-    def get_optimizer(self, lr=1e-3):
-        optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+    def get_optimizer(self, lr=1e-3, lr2=0, weight_decay=0):
+        ignored_params = list(map(id, self.embeds.parameters()))
+        base_params = filter(lambda p: id(p) not in ignored_params,
+                             self.parameters())
+        optimizer = torch.optim.Adam([
+            dict(params=base_params, weight_decay=weight_decay, lr=lr),
+            {'params': self.embeds.parameters(), 'lr': lr2}
+        ])
         return optimizer
+
 
