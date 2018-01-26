@@ -1,6 +1,7 @@
 **.zip
 **.rar
 **.csv
+<<<<<<< HEAD
 **.txt
 **.npz
 !**/.gitkeep
@@ -11,3 +12,11 @@
 **.pyc
 /temp/*
 
+=======
+**.npz
+/input/
+!**/.gitkeep
+/.idea/
+/paper/*
+/script/fasttext/data/
+>>>>>>> 514ac7698918d2b1f30beb59640b72880fa83824

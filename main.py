@@ -15,6 +15,7 @@ import ipdb
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
+
 def train(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
@@ -54,6 +55,7 @@ def train(**kwargs):
             label = Variable(label).float().cuda(opt.ngpu)
             batch += 1
             optimizer.zero_grad()
+
             predict = model(content)
             batch_loss = loss_function(predict, label)
             batch_loss.backward()
@@ -94,6 +96,7 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
         batch_loss = loss_function(predict, label)
         loss += batch_loss.data[0]
     model.train()
+    # print(confusion_matrix.value())
     loss = loss / step
 
     if opt.save_model:
@@ -152,8 +155,6 @@ def test(**kwargs):
         print('loss:{:,.5f}\n'.format(loss/step))
         flog.write('---------------------loss:{:,.5f}---------------------\n'.format(loss/step))
         flog.write(str(confusion_matrix)+'\n')
-
-
 
 if __name__ == '__main__':  
     import fire
