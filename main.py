@@ -63,7 +63,7 @@ def train(**kwargs):
             optimizer.step()
             loss += batch_loss.data[0]
 
-        epoch_loss, checkpoint_id, confusion = eval(test_data, opt, model, min_loss, checkpoint_id)
+        epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id)
         if epoch_loss <= min_loss:
             min_loss = epoch_loss
         elif epoch_loss > last_loss:
@@ -77,7 +77,6 @@ def train(**kwargs):
             str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')), epoch, loss / batch, epoch_loss, min_loss, opt.lr)
         print(msg)
         fw.write(msg)
-        fw.write(str(confusion))
         fw.flush()
     fw.close()
 
@@ -89,17 +88,14 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     step = 0
     model.eval()
     loss_function = nn.BCELoss(size_average=True)
-    confusion_matrix = MulLabelConfusionMeter(num_class=6)
     for content, label, _ in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         label = Variable(label, volatile=True).float().cuda(opt.ngpu)
         predict = model(content)
-        confusion_matrix.add(predict.data.cpu(), label.data.cpu(), opt.batch_size, step-1)
         batch_loss = loss_function(predict, label)
         loss += batch_loss.data[0]
     model.train()
-    # print(confusion_matrix.value())
     loss = loss / step
 
     if opt.save_model:
@@ -108,7 +104,7 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
         if loss <= min_loss:
             shutil.copy('./checkpoints/{}/checkpoint_last'.format(opt.id),
                         './checkpoints/{}/checkpoint_best'.format(opt.id))
-    return loss, checkpoint_id+1, confusion_matrix
+    return loss, checkpoint_id+1
 
 def test(**kwargs):
     opt.parse(kwargs)
