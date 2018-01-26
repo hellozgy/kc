@@ -22,7 +22,8 @@ class KCDataset(data.Dataset):
         npdata = np.load(os.path.join(base_dir, file))
         self.vocab_size = int(npdata['vocab_size'])
         labels = np.row_stack([npdata['docs'].item()[tag][1] for tag in tags]).squeeze()
-        self.labels = labels[:, 1:].astype(np.int) if 'commit' not in tags else labels# np.zeros((labels.shape[0], 1))
+        self.ids = labels[:, 0] if 'commit' not in tags else labels
+        self.labels = labels[:, 1:].astype(np.int) if 'commit' not in tags else np.zeros((labels.shape[0], 6))
         datas = [npdata['docs'].item()[tag][0] for tag in tags]
         if not split_sentence:
             self.datas = np.asarray([(d + [PAD_INDEX] * (self.max_len - len(d)))[: max_len] for data in datas for d in data])
@@ -39,7 +40,7 @@ class KCDataset(data.Dataset):
 
 
     def __getitem__(self, index):
-        return (self.datas[index], self.labels[index])
+        return (self.datas[index], self.labels[index], self.ids[index])
 
     def __len__(self):
         return self.datas.shape[0]

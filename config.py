@@ -22,6 +22,7 @@ class Config():
     save_model = False
     embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
     split_sentence = False
+    subset = 'commit'  # test函数的数据
 
     def parse(self, args):
         for k, v in args.items():
