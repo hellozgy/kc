@@ -10,7 +10,7 @@ class ConfusionMeter(object):
         for i in range(len(predict)):
             self.matrix[predict[i]][target[i]] += 1
             if predict[i] != target[i]:
-                self.error[predict[i]].append(batch_size * batch_index + i)
+                self.error[predict[i]].append(batch_size * batch_index + i + 1)
 
     def reset(self):
         self.__init__()

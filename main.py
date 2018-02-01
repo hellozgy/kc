@@ -49,6 +49,8 @@ def train(**kwargs):
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
     loss_function = nn.BCELoss(size_average=True)
+    # loss_function = BCELossWeight(opt.ngpu)
+    # loss_function.reset()
     last_loss = float('inf')
     fw = open('./checkpoints/{}/log.txt'.format(opt.id), 'a', encoding='utf-8')
     for epoch in range(opt.epochs):
@@ -79,7 +81,8 @@ def train(**kwargs):
             opt.lr = opt.lr * 0.5
             lr2 = opt.lr * 0.5
             model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
-            optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
+            # optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
+            model.update_optimizer(optimizer, opt.lr, lr2)
         last_loss = epoch_loss
 
     fw.close()

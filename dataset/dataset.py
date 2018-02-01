@@ -41,12 +41,15 @@ class KCDataset(data.Dataset):
         self.datas = self.datas.astype(np.int)
 
     def shuffle(self, d):
-        return np.random.permutation(d.tolist())
+        d = d.tolist()
+        index = d.index(PAD_INDEX) if PAD_INDEX in d else len(d)
+        d = np.random.permutation(d[:index]).tolist()+d[index:]
+        return np.asarray(d)
 
-    def dropout(self, d, p=0.5):
+    def dropout(self, d, p):
         len_ = len(d)
         index = np.random.choice(len_, int(len_ * p))
-        d[index] = 0
+        d[index] = PAD_INDEX
         return d
 
     def __getitem__(self, index):
