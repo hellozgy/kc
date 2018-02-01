@@ -1,11 +1,10 @@
 import os
 
-base_dir = os.path.abspath(os.path.dirname(__file__) + '/input')
-
 class Config():
     ngpu = -1  # 指定gpu
     model = 'BasicModule'
     id = None
+
     max_len = 100
     embeds_size = 300
     hidden_size = 256
@@ -20,7 +19,8 @@ class Config():
     vocab_size = -1
     num_classes = 6
     save_model = False
-    embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
+    docs_file = 'docs_bpe.npz'
+    embeds_path = 'vec_fasttext_bpe.npz'
     split_sentence = False
     subset = 'commit'  # test函数的数据
 

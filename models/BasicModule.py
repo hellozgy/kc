@@ -6,7 +6,7 @@ import numpy as np
 import random
 from dataset import Constants
 import ipdb
-
+import os
 
 class BasicModule(nn.Module):
     def __init__(self, opt):
@@ -46,6 +46,7 @@ class BasicModule(nn.Module):
             dict(params=base_params, weight_decay=weight_decay, lr=lr),
             {'params': self.embeds.parameters(), 'lr': lr2}
         ])
+        # optimizer.
         return optimizer
 
 

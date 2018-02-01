@@ -121,6 +121,6 @@ os.system(cmd)
 #6. 得到fasttext词向量
 # TODO: 还没运行测试
 cmd = 'cat ../input/train_data_bpe.csv ../input/test_data_bpe.csv > ../input/content_bpe.csv && ' \
-      'fasttext skipgram -input ../input/content_bpe.csv -output fasttext_bpe -dim 300 -epoch 10 && ' \
+      'fasttext skipgram -input ../input/content_bpe.csv -outdata fasttext_bpe -dim 300 -epoch 10 && ' \
       'mv ../input/fasttext_bpe.vec ../input/vec_fasttext_bpe.txt'
 os.system(cmd)
