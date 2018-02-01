@@ -1,7 +1,8 @@
 import ipdb
 
 class ConfusionMeter(object):
-    def __init__(self):
+    def __init__(self, label):
+        self.label = label
         self.matrix = [[0, 0], [0, 0]]
         self.error = [[], []]
 
@@ -15,7 +16,9 @@ class ConfusionMeter(object):
         self.__init__()
 
     def __str__(self):
-        res = "{:>6}\t{:>6}\n{:>6}\t{:>6}\n".format(self.matrix[0][0], self.matrix[0][1], self.matrix[1][0], self.matrix[1][1])
+        res = "{}:{:>6} {:>6} {:>6}  {:>6}  precision:{:>2}%\trecall:{:>2}%\n".format(
+            self.label, self.matrix[0][0], self.matrix[0][1], self.matrix[1][0], self.matrix[1][1],
+            int(self.matrix[1][1]/sum(self.matrix[1])*100), int(self.matrix[1][1]/(self.matrix[0][1]+self.matrix[1][1])*100))
         res += '<predict:0,target:1>: '
         res += ' '.join(list(map(str, self.error[0])))
         res += '\n<predict:1,target:0>: '
@@ -25,8 +28,9 @@ class ConfusionMeter(object):
 
 class MulLabelConfusionMeter(object):
     def __init__(self, num_class=6):
+        self.labels = ['toxic','severe_toxic','obscene','threat','insult','identity_hate']
         self.num_class = num_class
-        self.matrix = [ConfusionMeter() for _ in range(self.num_class)]
+        self.matrix = [ConfusionMeter(self.labels[i]) for i in range(self.num_class)]
 
     def add(self, predict, target, batch_size, batch_index):
         for i in range(self.num_class):

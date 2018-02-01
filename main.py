@@ -10,18 +10,21 @@ import torch
 import shutil
 import datetime
 from meter import MulLabelConfusionMeter
+from loss_module import BCELossWeight
 import ipdb
 
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
+data_dir = os.path.abspath(os.path.dirname(__file__) + './input/')
 
 def train(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
+    opt.embeds_path = os.path.join(data_dir, opt.embeds_path)
     assert opt.ngpu >= 0
-    train_data = KCDataset('docs_bpe.npz', ['train', 'val'], opt.max_len, split_sentence=opt.split_sentence)
-    test_data = KCDataset('docs_bpe.npz', ['test'], opt.max_len, split_sentence=opt.split_sentence)
+    train_data = KCDataset(opt.docs_file, ['train', 'val'], opt.max_len, split_sentence=opt.split_sentence, training=True, dropout_data=opt.dropout_data)
+    test_data = KCDataset(opt.docs_file, ['test'], opt.max_len, split_sentence=opt.split_sentence, training=False)
     opt.vocab_size = train_data.vocab_size
     model = getattr(models, opt.model)(opt)
     restore_file = './checkpoints/{}/{}'.format(opt.id,
@@ -41,7 +44,7 @@ def train(**kwargs):
     model.cuda(opt.ngpu)
 
     lr2 = 0
-    optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=2e-5)
+    optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
     dataloader_train = data.DataLoader(
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
@@ -64,20 +67,21 @@ def train(**kwargs):
             loss += batch_loss.data[0]
 
         epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id)
-        if epoch_loss <= min_loss:
-            min_loss = epoch_loss
-        elif epoch_loss > last_loss:
+        min_loss = min(min_loss, epoch_loss)
+
+        msg = '{} epoch:{:>2} train_loss:{:,.6f} test_loss:{:,.6f} minloss:{:,.6f} lr:{:,.6f}'.format(
+            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')), epoch, loss / batch, epoch_loss, min_loss,opt.lr)
+        print(msg)
+        fw.write(msg+'\n')
+        fw.flush()
+
+        if epoch_loss > last_loss:
             opt.lr = opt.lr * 0.5
-            lr2 = 2e-4 if lr2 == 0 else lr2 * 0.8
-            model = model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
-            optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=2e-5)
+            lr2 = opt.lr * 0.5
+            model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
+            optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
         last_loss = epoch_loss
 
-        msg = '{} epoch:{:>2} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(
-            str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')), epoch, loss / batch, epoch_loss, min_loss, opt.lr)
-        print(msg)
-        fw.write(msg)
-        fw.flush()
     fw.close()
 
 def eval(dataset, opt, model, min_loss, checkpoint_id):
@@ -87,7 +91,9 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     loss = 0
     step = 0
     model.eval()
-    loss_function = nn.BCELoss(size_average=True)
+    # loss_function = nn.BCELoss(size_average=True)
+    loss_function = BCELossWeight(opt.ngpu)
+    loss_function.reset()
     for content, label, _ in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
@@ -110,7 +116,8 @@ def test(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
     assert opt.ngpu >= 0
-    test_data = KCDataset('docs_bpe.npz', [opt.subset], opt.max_len, split_sentence=opt.split_sentence)
+    assert ('glove' in opt.docs_file and 'glove' in opt.embeds_path) or ('glove' not in opt.docs_file and 'glove' not in opt.embeds_path)
+    test_data = KCDataset(opt.docs_file, [opt.subset], opt.max_len, split_sentence=opt.split_sentence, training=False)
     opt.vocab_size = test_data.vocab_size
     restore_file = './checkpoints/{}/{}'.format(opt.id,
                                                 'checkpoint_best' if opt.restore_file is None else opt.restore_file)
@@ -128,7 +135,9 @@ def test(**kwargs):
     res_file = './checkpoints/{}/res.csv'.format(opt.id)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')
-    loss_function = nn.BCELoss(size_average=True)
+    # loss_function = nn.BCELoss(size_average=True)
+    loss_function = BCELossWeight(opt.ngpu)
+    loss_function.reset()
     confusion_matrix = MulLabelConfusionMeter(num_class=6)
     loss = 0
     step = 0
@@ -151,7 +160,7 @@ def test(**kwargs):
     fw.close()
 
     with open('./checkpoints/{}/log_test.txt'.format(opt.id), 'a', encoding='utf-8') as flog:
-        print('loss:{:,.5f}\n'.format(loss/step))
+        print('loss:{:,.6f}\n'.format(loss/step))
         flog.write('---------------------loss:{:,.5f}---------------------\n'.format(loss/step))
         flog.write(str(confusion_matrix)+'\n')
 
@@ -160,4 +169,6 @@ if __name__ == '__main__':
     fire.Fire()
     '''
     python main.py train --ngpu=9
+    python main.py train --ngpu=9 --model=LSTMText --save-model=True --restore=False --hidden-size=128 --epochs=100 --batch_size=64 --num_layers=3 \
+    --kmax-pooling=4 --linear-hidden-size=512 --weight-decay=1e-4 --dropout-data=0.5 --id=LSTMText_h128
     '''

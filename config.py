@@ -1,11 +1,10 @@
 import os
 
-base_dir = os.path.abspath(os.path.dirname(__file__) + '/input')
-
 class Config():
     ngpu = -1  # 指定gpu
     model = 'BasicModule'
     id = None
+
     max_len = 100
     embeds_size = 300
     hidden_size = 256
@@ -20,7 +19,8 @@ class Config():
     vocab_size = -1
     num_classes = 6
     save_model = False
-    embeds_path = os.path.join(base_dir, 'vec_fasttext_bpe.npz')
+    docs_file = 'docs_bpe.npz'
+    embeds_path = 'vec_fasttext_bpe.npz'
     split_sentence = False
     subset = 'commit'  # test函数的数据
 
@@ -29,7 +29,11 @@ class Config():
     filter_nums = [128, 128, 256, 256]
     model_type = 'multichannel'
     tune = False # 使用测试集微调
-
+    num_layers = 1
+    kmax_pooling = 3
+    linear_hidden_size = 2000
+    weight_decay = 2e-5
+    dropout_data = 0.7
 
     def parse(self, args):
         for k, v in args.items():

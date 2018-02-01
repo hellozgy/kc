@@ -1,5 +1,5 @@
 from torch.utils import data
-import os,re
+import os,re,random
 import word2vec
 import ipdb
 import numpy as np
@@ -8,7 +8,7 @@ from dataset.Constants import PAD_INDEX
 base_dir = os.path.abspath(os.path.dirname(__file__) + './../input/')
 
 class KCDataset(data.Dataset):
-    def __init__(self, file, tags, max_len, split_sentence=False, max_sentence=10, max_word_persentence=30):
+    def __init__(self, file, tags, max_len, split_sentence=False, max_sentence=10, max_word_persentence=30, training=False, dropout_data=0.5):
         '''
         :param file:the file of all data
         :param tags: a list of train,val,test,commit
@@ -19,6 +19,8 @@ class KCDataset(data.Dataset):
         '''
         self.tags = tags
         self.max_len = max_len
+        self.training = training
+        self.dropout_p = dropout_data
         npdata = np.load(os.path.join(base_dir, file))
         self.vocab_size = int(npdata['vocab_size'])
         labels = np.row_stack([npdata['docs'].item()[tag][1] for tag in tags]).squeeze()
@@ -38,9 +40,23 @@ class KCDataset(data.Dataset):
             self.datas = np.asarray(datas)
         self.datas = self.datas.astype(np.int)
 
+    def shuffle(self, d):
+        return np.random.permutation(d.tolist())
+
+    def dropout(self, d, p=0.5):
+        len_ = len(d)
+        index = np.random.choice(len_, int(len_ * p))
+        d[index] = 0
+        return d
 
     def __getitem__(self, index):
-        return (self.datas[index], self.labels[index], self.ids[index])
+        content, label, id = self.datas[index], self.labels[index], self.ids[index]
+        if self.training:
+            if random.random() > 0.5:
+                content = self.dropout(content, p=self.dropout_p)
+            else:
+                content = self.shuffle(content)
+        return content, label, id
 
     def __len__(self):
         return self.datas.shape[0]

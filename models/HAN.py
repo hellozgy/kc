@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import ipdb
 
 class HAN(BasicModule):
-    def __init__(self, opt, word_layers=1, sent_layers=1):
+    def __init__(self, opt):
         super(HAN, self).__init__(opt)
         self.vocab_size = opt.vocab_size
         assert self.vocab_size > 0
@@ -20,8 +20,8 @@ class HAN(BasicModule):
         if opt.embeds_path:
             self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
 
-        self.word_encoder = nn.LSTM(self.embeds_size, self.hidden_size, bidirectional=True, num_layers=word_layers)
-        self.sent_encoder = nn.LSTM(6*self.hidden_size, self.hidden_size, bidirectional=True, num_layers=sent_layers)
+        self.word_encoder = nn.LSTM(self.embeds_size, self.hidden_size, bidirectional=True, num_layers=opt.num_layers)
+        self.sent_encoder = nn.LSTM(6*self.hidden_size, self.hidden_size, bidirectional=True, num_layers=opt.num_layers)
         self.fc_word = nn.Linear(2*self.hidden_size, 2*self.hidden_size)
         self.fc_sent = nn.Linear(2*self.hidden_size, 2*self.hidden_size)
         self.query_word = nn.Parameter(torch.FloatTensor(2*self.hidden_size, 1))
@@ -42,10 +42,9 @@ class HAN(BasicModule):
 
         self.fc = nn.Sequential(
             nn.Linear(6 * self.hidden_size, self.hidden_size),
-            # nn.BatchNorm1d(self.hidden_size),
+            nn.BatchNorm1d(self.hidden_size),
             nn.Tanh(),
             nn.Linear(self.hidden_size, self.num_classes),
-            # nn.BatchNorm1d(self.num_classes),
             nn.Sigmoid()
         )
 
@@ -77,7 +76,6 @@ class HAN(BasicModule):
         sents_attn2, _ = self.attention(sents, ht, self.attn_Wa_sent, self.attn_Va_sent, self.attn_fc_sent,  Variable(mask_sent))
         sents = torch.cat([ht, sents_attn, sents_attn2], -1)
 
-        sents = F.dropout(sents, p=self.dropout, training=self.training)
         output = self.fc(sents)
         return output
 
@@ -105,7 +103,7 @@ class HAN(BasicModule):
         At = At + mask
         At = F.softmax(At, dim=1).unsqueeze(1)  # (batch_size,1, seqlen)
         attn = torch.bmm(At, ctx)[:,0,:]  # (batch_size,1, hidden_size)
-        attn = attn_fc(torch.cat([attn, residual], 1))
+        attn = F.tanh(attn_fc(torch.cat([attn, residual], 1)))
         return attn, At[:, 0, :]
 
 
