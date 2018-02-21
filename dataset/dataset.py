@@ -3,7 +3,8 @@ import os,re,random
 import word2vec
 import ipdb
 import numpy as np
-from dataset.Constants import PAD_INDEX
+from dataset.Constants import PAD_INDEX, UNK_INDEX
+import datetime
 
 base_dir = os.path.abspath(os.path.dirname(__file__) + './../input/')
 
@@ -21,12 +22,14 @@ class KCDataset(data.Dataset):
         self.max_len = max_len
         self.training = training
         self.dropout_p = dropout_data
+        self.split_sentence = split_sentence
         npdata = np.load(os.path.join(base_dir, file))
         self.vocab_size = int(npdata['vocab_size'])
-        labels = np.row_stack([npdata['docs'].item()[tag][1] for tag in tags]).squeeze()
+        docs = npdata['docs'].item()
+        labels = np.row_stack([docs[tag][1] for tag in tags]).squeeze()
         self.ids = labels[:, 0] if 'commit' not in tags else labels
         self.labels = labels[:, 1:].astype(np.int) if 'commit' not in tags else np.zeros((labels.shape[0], 6))
-        datas = [npdata['docs'].item()[tag][0] for tag in tags]
+        datas = [docs[tag][0] for tag in tags]
         if not split_sentence:
             self.datas = np.asarray([(d + [PAD_INDEX] * (self.max_len - len(d)))[: max_len] for data in datas for d in data])
         else:
@@ -54,12 +57,17 @@ class KCDataset(data.Dataset):
 
     def __getitem__(self, index):
         content, label, id = self.datas[index], self.labels[index], self.ids[index]
+        if self.split_sentence:length = 0
+        else:
+            length = np.where(self.datas[index]==PAD_INDEX)[0]
+            length = length[0] if len(length)>0 else len(self.datas[index])
+
         if self.training:
-            if random.random() > 0.5:
+            if np.random.random() > 0.5:
                 content = self.dropout(content, p=self.dropout_p)
             else:
                 content = self.shuffle(content)
-        return content, label, id
+        return content, label, id, np.asarray([length])
 
     def __len__(self):
         return self.datas.shape[0]

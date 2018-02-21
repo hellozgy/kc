@@ -4,6 +4,8 @@ import numpy as np
 from torch import nn
 import torch.nn.functional as F
 from dataset.Constants import PAD_INDEX
+import ipdb
+import torch.nn.utils.rnn as rnn_util
 
 
 def kmax_pooling(x, dim, k):
@@ -42,9 +44,11 @@ class LSTMText(BasicModule):
             nn.Sigmoid()
         )
 
-    def forward(self, content):
+    def forward(self, content, lengths):
         content = self.embeds(content)
         content = F.dropout(content, p=self.dropout, training=self.training)
+        ipdb.set_trace()
+
         content_lstm = self.lstm(content.permute(1, 0, 2))[0].permute(1, 2, 0)  # content_lstm: (batch, dim, seq_len)
         content_conv_out = kmax_pooling(content_lstm, 2, self.kmax_pooling)
         reshaped = content_conv_out.view(content_conv_out.size(0), -1)

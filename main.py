@@ -1,5 +1,6 @@
 #coding:utf-8
 import os
+import numpy as np
 from torch.utils import data
 import torch.nn as nn
 from torch.autograd import Variable
@@ -9,10 +10,12 @@ import models
 import torch
 import shutil
 import datetime
+import numpy as np
 from meter import MulLabelConfusionMeter
 from loss_module import BCELossWeight
 import ipdb
 
+np.random.seed(1)
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
 
@@ -43,26 +46,25 @@ def train(**kwargs):
         min_loss = float(model_file['loss'])
     model.cuda(opt.ngpu)
 
+
     lr2 = 0
     optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
     dataloader_train = data.DataLoader(
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
     loss_function = nn.BCELoss(size_average=True)
-    # loss_function = BCELossWeight(opt.ngpu)
-    # loss_function.reset()
     last_loss = float('inf')
     fw = open('./checkpoints/{}/log.txt'.format(opt.id), 'a', encoding='utf-8')
     for epoch in range(opt.epochs):
         loss = 0
         batch = 0
-        for content, label, _ in dataloader_train:
+        for content, label, ids, lengths in dataloader_train:
             content = Variable(content).long().cuda(opt.ngpu)
             label = Variable(label).float().cuda(opt.ngpu)
             batch += 1
             optimizer.zero_grad()
 
-            predict = model(content)
+            predict = model(content, lengths)
             batch_loss = loss_function(predict, label)
             batch_loss.backward()
             optimizer.step()
@@ -94,14 +96,14 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     loss = 0
     step = 0
     model.eval()
-    # loss_function = nn.BCELoss(size_average=True)
-    loss_function = BCELossWeight(opt.ngpu)
-    loss_function.reset()
-    for content, label, _ in dataloader:
+    loss_function = nn.BCELoss(size_average=True)
+    # loss_function = BCELossWeight(opt.ngpu)
+    # loss_function.reset()
+    for content, label, ids, lengths in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         label = Variable(label, volatile=True).float().cuda(opt.ngpu)
-        predict = model(content)
+        predict = model(content, lengths)
         batch_loss = loss_function(predict, label)
         loss += batch_loss.data[0]
     model.train()
@@ -138,18 +140,18 @@ def test(**kwargs):
     res_file = './checkpoints/{}/res.csv'.format(opt.id)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')
-    # loss_function = nn.BCELoss(size_average=True)
-    loss_function = BCELossWeight(opt.ngpu)
-    loss_function.reset()
+    loss_function = nn.BCELoss(size_average=True)
+    # loss_function = BCELossWeight(opt.ngpu)
+    # loss_function.reset()
     confusion_matrix = MulLabelConfusionMeter(num_class=6)
     loss = 0
     step = 0
     model.eval()
-    for content, labels, ids in dataloader:
+    for content, labels, ids , lengths in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         labels = Variable(labels, volatile=True).float().cuda(opt.ngpu)
-        predicts = model(content)
+        predicts = model(content, lengths)
 
         batch_loss = loss_function(predicts, labels)
         loss += batch_loss.data[0]

@@ -48,7 +48,7 @@ class HAN(BasicModule):
             nn.Sigmoid()
         )
 
-    def forward(self, content):
+    def forward(self, content, lengths):
         '''
         :param content: batch * max_sents * max_word
         :return:

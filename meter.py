@@ -13,7 +13,7 @@ class ConfusionMeter(object):
                 self.error[predict[i]].append(batch_size * batch_index + i + 1)
 
     def reset(self):
-        self.__init__()
+        self.__init__(self.label)
 
     def __str__(self):
         res = "{}:{:>6} {:>6} {:>6}  {:>6}  precision:{:>2}%\trecall:{:>2}%\n".format(
