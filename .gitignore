@@ -1,8 +1,13 @@
 **.zip
 **.csv
 **.npz
+**.bin
+**.vec
 /input/
 !**/.gitkeep
 /.idea/
 /paper/*
-/script/fasttext/data/
+/script/fasttext/
+/checkpoints/
+/.vscode/
+/__pycache__/

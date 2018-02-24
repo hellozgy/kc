@@ -44,17 +44,6 @@ class CNNText(nn.Module):
         print('load embedding')
         self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
 
-        # if self.model_type == 'static' or 'multichannel':
-        #     self.embeds.weight.requires_grad = False
-
-        # self.embedd2 = None
-        #
-        # if self.model_type == 'multichannel':
-        #     self.in_channel = 2
-        #     print('loading embedding 2')
-        #     self.embedd2 = nn.Embedding(self.vocab_size, self.embeds_size)
-        #     self.embedd2.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
-
         # conv层
         for i in range(len(self.filters)):
             conv = nn.Conv1d(in_channels=self.in_channel, out_channels=self.filter_nums[i],
@@ -76,9 +65,7 @@ class CNNText(nn.Module):
     def forward(self, inputs):
         x = self.embeds(inputs).view(-1, 1, self.embeds_size * self.max_len)
 
-        # if self.model_type == 'multichannel':
-        #     x2 = self.embedd2(inputs).view(-1, 1, self.embeds_size * self.max_len)
-        #     x = torch.cat((x, x2), dim=1)
+
 
         conv_results = [
             F.max_pool1d(F.relu(self.get_conv(i)(x)),

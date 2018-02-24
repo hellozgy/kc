@@ -11,9 +11,9 @@ import shutil
 import datetime
 from torchnet import meter
 import ipdb
-
 torch.manual_seed(1)
 torch.cuda.manual_seed(1)
+
 
 
 def train(**kwargs):
@@ -27,7 +27,8 @@ def train(**kwargs):
     restore_file = './checkpoints/{}/{}'.format(opt.id,
                                                 'checkpoint_last' if opt.restore_file is None else opt.restore_file)
     save2path = './checkpoints/{}/'.format(opt.id)
-    if not os.path.exists(save2path): os.system('mkdir -p {}'.format(save2path))
+    if not os.path.exists(save2path):
+        os.system('mkdir -p {}'.format(save2path))
     min_loss = float('inf')
     checkpoint_id = 1
     if os.path.exists(restore_file) and opt.restore:
@@ -40,7 +41,7 @@ def train(**kwargs):
         min_loss = float(model_file['loss'])
     model.cuda(opt.ngpu)
 
-    optimizer = model.get_optimizer(opt.lr, lr2=0, weight_decay=2e-5)
+    optimizer = model.get_optimizer(opt.lr, lr2=1e-6, weight_decay=2e-5)
     dataloader_train = data.DataLoader(
         dataset=train_data, batch_size=opt.batch_size,
         shuffle=True, num_workers=1, drop_last=False)
@@ -56,10 +57,13 @@ def train(**kwargs):
             batch += 1
             optimizer.zero_grad()
 
+            ipdb.set_trace()
+
             predict = model(content)
             batch_loss = loss_function(predict, label)
             batch_loss.backward()
             optimizer.step()
+            auc = 
             loss += batch_loss.data[0]
 
         epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id)
@@ -67,7 +71,7 @@ def train(**kwargs):
             min_loss = epoch_loss
         elif epoch_loss > last_loss:
             opt.lr = opt.lr / 2
-            optimizer = model.get_optimizer(opt.lr, lr2=opt.lr / 2, weight_decay=2e-5)
+            optimizer = model.get_optimizer(opt.lr,  weight_decay=2e-5)
         last_loss = epoch_loss
 
         msg = '{} epoch:{:>2} train_loss:{:,.5f} test_loss:{:,.5f} minloss:{:,.5f} lr:{:,.5f}'.format(
@@ -106,6 +110,7 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
                         './checkpoints/{}/checkpoint_best'.format(opt.id))
     return loss, checkpoint_id+1
 
+
 def test(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
@@ -125,7 +130,7 @@ def test(**kwargs):
 
     dataloader_train = data.DataLoader(
         dataset=test_data, batch_size=opt.batch_size,
-        shuffle=False, num_workers=1, drop_last=False)
+        shuffle=False, num_workers=4, drop_last=False)
     res_file = './checkpoints/{}/res.csv'.format(opt.id)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')

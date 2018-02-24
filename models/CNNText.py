@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from dataset import Constants
 import ipdb
 
 
@@ -37,7 +38,8 @@ class CNNText(nn.Module):
 
         assert (len(self.filters) == len(self.filter_nums))
 
-        self.embeds = nn.Embedding(self.vocab_size, self.embeds_size)
+        self.embeds = nn.Embedding(self.vocab_size, self.embeds_size,
+                                   padding_idx=Constants.PAD_INDEX)
         # 加载现有的word2vec模型
         print('load embedding')
         self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
@@ -58,13 +60,13 @@ class CNNText(nn.Module):
                       out_channels=self.filter_nums[i],
                       kernel_size=self.filters[i]),
             nn.BatchNorm1d(self.filter_nums[i]),
-            nn.ReLU(inplace=True),
+            nn.Hardtanh(inplace=True),
 
             nn.Conv1d(in_channels=self.filter_nums[i],
                       out_channels=self.filter_nums[i],
                       kernel_size=self.filters[i]),
             nn.BatchNorm1d(self.filter_nums[i]),
-            nn.ReLU(inplace=True),
+            nn.Hardtanh(inplace=True),
 
             nn.MaxPool1d(kernel_size=self.max_len - self.filters[i] * 2 + 2)
         ) for i in range(len(self.filters))]
@@ -73,16 +75,13 @@ class CNNText(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Linear(sum(self.filter_nums),
-                      2 * self.hidden_size),
-            nn.BatchNorm1d(self.hidden_size * 2),
-            nn.ReLU(inplace=True),
-            nn.Linear(self.hidden_size * 2, self.num_classes),
+                      self.hidden_size),
+            nn.BatchNorm1d(self.hidden_size),
+            nn.Hardtanh(inplace=True),
+            nn.Linear(self.hidden_size, self.num_classes),
             nn.BatchNorm1d(self.num_classes),
             nn.Sigmoid()
         )
-
-    def get_conv(self, i):
-        return getattr(self, f'conv_{i}')
 
     def forward(self, inputs):
         x = self.embeds(inputs).permute(0, 2, 1)
@@ -95,7 +94,7 @@ class CNNText(nn.Module):
         conv_results = [conv(x) for conv in self.convs]
 
         x = torch.cat(conv_results, dim=1)
-        x = F.dropout(x, p=self.dropout)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
 
@@ -111,6 +110,9 @@ class CNNText(nn.Module):
             {'params': self.embedd2.parameters(), 'lr': lr}
         ])
         return optimizer
+    
+    
+    
 
 
 

@@ -24,6 +24,14 @@ def embed2vec(embedding_file, vec_file):
     word2id[Constants.UNK_WORD] = Constants.UNK_INDEX
     np.savez_compressed(os.path.join(base_dir, vec_file),vector=vec,word2id=word2id)
 
+def fasttext_embed2vev(embedding_file, vec_file):
+    """
+    word -> embedding -> numpy
+    """
+    import fastText
+    model = fastText.load_model('./fasttext/data/toxic-data-skipgram-300d.bin')
+
+
 
 def word2id(vec_file, data_files, label_files, tags, res_file):
     word2id = np.load(os.path.join(base_dir, vec_file))['word2id'].item()
