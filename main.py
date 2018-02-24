@@ -63,7 +63,6 @@ def train(**kwargs):
             batch_loss = loss_function(predict, label)
             batch_loss.backward()
             optimizer.step()
-            auc = 
             loss += batch_loss.data[0]
 
         epoch_loss, checkpoint_id = eval(test_data, opt, model, min_loss, checkpoint_id)
