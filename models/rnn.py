@@ -5,9 +5,6 @@ from torch.nn import functional as F
 from .layer_norm import LayerNorm
 import ipdb
 
-
-
-
 class LNGRUCell(nn.Module):
     # LayerNorm + GRU
     def __init__(self, input_size, hidden_size, bias=True, affine=True):
@@ -21,13 +18,11 @@ class LNGRUCell(nn.Module):
         self.W_ln = LayerNorm(3*hidden_size, affine=affine)
         self.U_ln = LayerNorm(3*hidden_size, affine=affine)
 
-        self.reset_parameters()
+        self.reset()
 
-    def reset_parameters(self):
-        weight_data = torch.eye(self.hidden_size)
-        weight_data = weight_data.repeat(1, 3)
-        self.W.data.set_(weight_data)
-        self.U.data.set_(weight_data)
+    def reset(self):
+        torch.nn.init.xavier_normal(self.W)
+        torch.nn.init.xavier_normal(self.U)
 
     def forward(self, input, hx):
         assert input.dim()==2 and hx.dim()==2
@@ -36,14 +31,14 @@ class LNGRUCell(nn.Module):
 
         xw = torch.matmul(input, self.W)
         hu = torch.matmul(hx, self.U)
-        xw = self.W_ln(xw)
-        hu = self.U_ln(hu)
-        xw = torch.split(xw, self.hidden_size, -1)
-        hu = torch.split(hu, self.hidden_size, -1)
+        xw1 = self.W_ln(xw)
+        hu1 = self.U_ln(hu)
+        xw2 = torch.split(xw1, self.hidden_size, -1)
+        hu2 = torch.split(hu1, self.hidden_size, -1)
 
-        z = F.sigmoid(xw[0] + hu[0] + self.b[:self.hidden_size])
-        r = F.sigmoid(xw[1] + hu[1] + self.b[self.hidden_size:2*self.hidden_size])
-        hx_ = F.tanh(r * hu[2] + xw[2] + self.b[2*self.hidden_size:])
+        z = F.sigmoid(xw2[0] + hu2[0] + self.b[:self.hidden_size])
+        r = F.sigmoid(xw2[1] + hu2[1] + self.b[self.hidden_size:2*self.hidden_size])
+        hx_ = F.tanh(r * hu2[2] + xw2[2] + self.b[2*self.hidden_size:])
         hx = (1 - z) * hx_ + z * hx
         return hx
 
@@ -51,35 +46,35 @@ class LNGRU(nn.Module):
     '''
     使用参见标准GRU
     '''
-    def __init__(self, GRU, input_size, hidden_size, num_layers=1, bidirectory=False, bias=True, affine=True, dropout=0):
+    def __init__(self, GRUCell, input_size, hidden_size, num_layers=1, bidirectional=False, bias=True, dropout=0):
         super(LNGRU, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.bidirectory = bidirectory
-        self.ff_gru = nn.ModuleList([GRU(input_size, hidden_size, bias, affine)] +
-                                    [GRU(hidden_size, hidden_size, bias, affine) for _ in range(num_layers-1)])
+        self.bidirectional = bidirectional
+        self.ff_gru = nn.ModuleList([GRUCell(input_size, hidden_size, bias)] +
+                                    [GRUCell(hidden_size, hidden_size, bias) for _ in range(num_layers-1)])
         self.back_gru = None
-        if bidirectory:
-            self.back_gru = nn.ModuleList([GRU(input_size, hidden_size, bias, affine)] +
-                                          [GRU(hidden_size, hidden_size, bias, affine) for _ in range(num_layers-1)])
+        if bidirectional:
+            self.back_gru = nn.ModuleList([GRUCell(input_size, hidden_size, bias)] +
+                                          [GRUCell(hidden_size, hidden_size, bias) for _ in range(num_layers-1)])
         self.dropout = dropout
 
     def forward(self, input, h0=None):
         assert input.dim() == 3, input.size()
         if h0 is None:
-            h0 = Variable(input.data.new(self.num_layers * (2 if self.bidirectory else 1),
+            h0 = Variable(input.data.new(self.num_layers * (2 if self.bidirectional else 1),
                                 input.size(1), self.hidden_size).zero_().float())
         assert h0.dim() == 3
         assert input.size(2) == self.input_size and h0.size(2) == self.hidden_size, 'input:{},h0:{}'.format(str(input.size()), str(h0.size()))
         assert input.size(1) == h0.size(1)
-        assert h0.size(0) == self.num_layers * (2 if self.bidirectory else 1)
+        assert h0.size(0) == self.num_layers * (2 if self.bidirectional else 1)
         hiddens = []
         input_ff = [input[i] for i in range(input.size(0))]
         input_back = [input[i] for i in range(input.size(0))]
         seq_len = input.size(0)
         for layer in range(self.num_layers):
-            hidden = h0[layer*(2 if self.bidirectory else 1),:,:]
+            hidden = h0[layer*(2 if self.bidirectional else 1),:,:]
             output_ff = []
             for timestep in range(seq_len):
                 x = input_ff[timestep]
@@ -88,8 +83,8 @@ class LNGRU(nn.Module):
             input_ff = output_ff
             hiddens.append(hidden)
 
-            if self.bidirectory:
-                hidden = h0[1 + layer * (2 if self.bidirectory else 1), :, :]
+            if self.bidirectional:
+                hidden = h0[1 + layer * (2 if self.bidirectional else 1), :, :]
                 output_back = []
                 for timestep in range(seq_len-1, -1, -1):
                     x = input_back[timestep]
@@ -101,7 +96,7 @@ class LNGRU(nn.Module):
 
         hiddens = torch.stack(hiddens)
         output = torch.stack(input_ff)
-        if self.bidirectory:
+        if self.bidirectional:
             output = torch.cat([output, torch.stack(input_back)], 2)
         return output, hiddens
 

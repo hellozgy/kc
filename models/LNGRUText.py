@@ -5,10 +5,11 @@ from torch import nn
 import torch.nn.functional as F
 from dataset.Constants import PAD_INDEX
 from .layer_norm import LayerNorm
-from .rnn import LNGRUCell,LNGRU
+from .rnn import LNGRUCell, LNGRU
+from .activate import Swish,Highway
 import ipdb
 import torch.nn.utils.rnn as rnn_util
-
+from .func import swish
 
 def kmax_pooling(x, dim, k):
     index = x.topk(k, dim=dim)[1].sort(dim=dim)[0]
@@ -28,38 +29,35 @@ class LNGRUText(BasicModule):
         self.embeds = nn.Embedding(self.vocab_size, self.embeds_size, padding_idx=PAD_INDEX)
         if opt.embeds_path:
             self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path[:-4]+'.npz')['vec']))
+        self.gru = nn.ModuleList([nn.GRU(input_size=self.embeds_size, hidden_size=self.hidden_size, bidirectional=True)]+
+                                  [nn.GRU(input_size=2*self.hidden_size, hidden_size=self.hidden_size, bidirectional=True) for _ in range(opt.num_layers-1)])
+        # self.ln = nn.ModuleList([LayerNorm(self.embeds_size)]+
+        #     [LayerNorm(2*self.hidden_size) for _ in range(opt.num_layers-1)])
 
-        self.gru = nn.ModuleList([LNGRU(LNGRUCell, input_size=self.embeds_size, hidden_size=self.hidden_size, bidirectory=True)]+
-                                  [LNGRU(LNGRUCell, input_size=2*self.hidden_size, hidden_size=self.hidden_size, bidirectory=True) for _ in range(opt.num_layers-1)])
-        self.ln = nn.ModuleList([LayerNorm(self.embeds_size)]+
-            [LayerNorm(2*self.hidden_size) for _ in range(opt.num_layers-1)])
-
+        fc_size = self.hidden_size*2+opt.num_layers*2*self.hidden_size
         self.fc = nn.Sequential(
-            nn.Linear(self.kmax_pooling*(self.hidden_size*2)+opt.num_layers*2*self.hidden_size, self.linear_hidden_size),
-            LayerNorm(self.linear_hidden_size),
-            nn.Sigmoid(),
+            nn.Linear(fc_size, self.linear_hidden_size),
+            nn.BatchNorm1d(self.linear_hidden_size),
+            Swish(),
             nn.Linear(self.linear_hidden_size, self.num_classes),
             nn.Sigmoid()
         )
 
     def forward(self, content):
+        seq_len = content.size(1)
         content = self.embeds(content).permute(1, 0, 2)
-        content = F.dropout(content, p=self.dropout, training=self.training)
+
         hiddens = []
         input = content
-        pre = 0
-        for layer, (gru, ln) in enumerate(zip(self.gru, self.ln)):
-            input = F.sigmoid(ln(input))
-            ipdb.set_trace()
+        # pre = 0
+        for layer, gru in enumerate(self.gru):
+            # input = ln(input)
             output, hn = gru(input)
             hiddens.append(torch.cat([hn[0],hn[1]], 1))
-            input = output + pre
-            pre = pre + output
+            input = output + (input if layer>0 else 0)
 
         hiddens = torch.cat(hiddens, 1)
-        content_lstm = output.permute(1, 2, 0)  # content_lstm: (batch, dim, seq_len)
-        content_conv_out = kmax_pooling(content_lstm, 2, self.kmax_pooling)
-        reshaped = content_conv_out.view(content_conv_out.size(0), -1)
-        output = torch.cat([hiddens, reshaped], 1)
+        output = F.max_pool1d(output.permute(1,2,0), seq_len).squeeze(2)
+        # output = torch.cat([hiddens, output], 1)
         predicts = self.fc(output)
         return predicts

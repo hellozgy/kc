@@ -5,7 +5,7 @@ from torch.utils import data
 import torch.nn as nn
 from torch.autograd import Variable
 from config import opt
-from dataset import KCDataset, KCDataset10fold
+from dataset import KCDataset, KCDataset10fold, KCDatasetTest
 import models
 import torch
 import shutil
@@ -22,13 +22,14 @@ torch.cuda.manual_seed(1)
 data_dir = os.path.abspath(os.path.dirname(__file__) + './input/')
 
 def train(**kwargs):
+    torch.cuda.set_device(opt.ngpu)
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
     assert opt.ngpu >= 0
     # train_data = KCDataset(opt.docs_file, ['train', 'val'], opt.max_len, split_sentence=opt.split_sentence, training=True, dropout_data=opt.dropout_data)
     # test_data = KCDataset(opt.docs_file, ['test'], opt.max_len, split_sentence=opt.split_sentence, training=False)
     print('load data...')
-    dataset = KCDataset10fold(index=7, max_len=200, vec_name=opt.embeds_path, training=True, dropout_data=0.3)
+    dataset = KCDataset10fold(index=opt.index, max_len=opt.max_len, vec_name=opt.embeds_path, training=True, dropout_data=0.3)
     opt.vocab_size = dataset.vocab_size
     print('load model...')
     model = getattr(models, opt.model)(opt)
@@ -55,7 +56,7 @@ def train(**kwargs):
         shuffle=True, num_workers=1, drop_last=False)
     loss_function = nn.BCELoss(size_average=True)
     fw = open('./checkpoints/{}/log.txt'.format(opt.id), 'a', encoding='utf-8')
-    tag = 3
+    # tag = 3
     print('train...')
     for epoch in range(opt.epochs):
         loss = 0
@@ -82,14 +83,14 @@ def train(**kwargs):
         fw.flush()
 
         if epoch_loss > min_loss:
-            tag -= 1
-            if tag==0:
-                tag=2
-                opt.lr = opt.lr * 0.5
-                lr2 = opt.lr * 0.5
-                model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
-                optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
-                # model.update_optimizer(optimizer, opt.lr, lr2)
+            # tag -= 1
+            # if tag==0:
+            #     tag=2
+            opt.lr = opt.lr * 0.5
+            lr2 = 2e-4 if lr2==0 else lr2*0.5
+            model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
+            optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
+            # model.update_optimizer(optimizer, opt.lr, lr2)
 
     fw.close()
 
@@ -126,8 +127,8 @@ def test(**kwargs):
     opt.parse(kwargs)
     opt.id = opt.model if opt.id is None else opt.id
     assert opt.ngpu >= 0
-    assert ('glove' in opt.docs_file and 'glove' in opt.embeds_path) or ('glove' not in opt.docs_file and 'glove' not in opt.embeds_path)
-    test_data = KCDataset(opt.docs_file, [opt.subset], opt.max_len, split_sentence=opt.split_sentence, training=False)
+    # assert ('glove' in opt.docs_file and 'glove' in opt.embeds_path) or ('glove' not in opt.docs_file and 'glove' not in opt.embeds_path)
+    test_data = KCDatasetTest('./tenfold/train_data_test_7.csv', '.tenfold/train_label_test_7.csv')
     opt.vocab_size = test_data.vocab_size
     restore_file = './checkpoints/{}/{}'.format(opt.id,
                                                 'checkpoint_best' if opt.restore_file is None else opt.restore_file)
@@ -152,11 +153,11 @@ def test(**kwargs):
     loss = 0
     step = 0
     model.eval()
-    for content, labels, ids , lengths in dataloader:
+    for content, labels, ids in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         labels = Variable(labels, volatile=True).float().cuda(opt.ngpu)
-        predicts = model(content, lengths)
+        predicts = model(content)
 
         batch_loss = loss_function(predicts, labels)
         loss += batch_loss.data[0]

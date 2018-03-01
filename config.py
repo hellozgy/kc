@@ -23,6 +23,7 @@ class Config():
     embeds_path = './input/vec_glove_bpe_300.txt'
     split_sentence = False
     subset = 'commit'  # test函数的数据
+    index = 7
 
     # CNNText 参数
     filters = [2, 3, 4, 5]

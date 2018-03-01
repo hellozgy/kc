@@ -160,6 +160,55 @@ class KCDataset10fold(data.Dataset):
 
     def __len__(self):
         return self.data.shape[0]
+
+class KCDatasetTest(data.Dataset):
+    def __init__(self, data_file, label_file,  max_len=100, vec_name='./input/vec_fasttext_bpe_300.txt',
+                 split_sentence=False, max_sentence=10, max_word_persentence=30):
+        '''
+        :param file:the file of all data
+        :param tags: a list of train,val,test,commit
+        :param max_len:
+        :param split_sentence:
+        :param max_sentence:
+        :param max_word_persentence:
+        '''
+
+        def read_data(fname):
+            res = []
+            with open(fname, 'r', encoding='utf-8') as f:
+                for line in f:
+                    res.append(line.strip())
+            return res
+
+
+        em = word2vec.load(vec_name)
+        if not os.path.exists(vec_name[:-4]):
+            vec = em.vectors
+            pad_unk = np.zeros((2, vec.shape[1]))
+            vec = np.row_stack((pad_unk, vec))
+            np.savez_compressed(vec_name[:-4]+'.npz', vec=vec)
+        word2id = {k: v + 2 for k, v in em.vocab_hash.items()}
+        word2id[PAD_WORD] = PAD_INDEX
+        word2id[UNK_WORD] = UNK_INDEX
+        self.vocab_size = len(word2id)
+
+        self.data = read_data(data_file)
+        self.data_label = read_data(label_file)
+        assert len(self.train)==len(self.train_label)
+        self.data = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.data]
+        self.data = [line+[PAD_INDEX]*(max_len-len(line)) for line in self.data]
+        self.data = np.asarray(self.data)
+        self.data_id = [[line.split(',')[0]] for line in self.data_label]
+        self.data_label = [[int(t) for t in line.split(',')[1:]] if len(line.split(','))==7 else [0]*6 for line in self.data_label]
+        self.data_label = np.asarray(self.data_label)
+
+    def __getitem__(self, index):
+        return self.data[index], self.data_label[index], self.data_id[index]
+
+    def __len__(self):
+        return self.data.shape[0]
+
+
 if __name__ == '__main__':
     ds = KCDataset('docs_bpe.npz', ['test'], max_len=100, split_sentence=True)
     for k,v in ds:
