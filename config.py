@@ -20,7 +20,7 @@ class Config():
     num_classes = 6
     save_model = False
     docs_file = 'docs_bpe.npz'
-    embeds_path = 'vec_fasttext_bpe.npz'
+    embeds_path = './input/vec_glove_bpe_300.txt'
     split_sentence = False
     subset = 'commit'  # test函数的数据
 

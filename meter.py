@@ -33,6 +33,13 @@ class MulLabelConfusionMeter(object):
         self.matrix = [ConfusionMeter(self.labels[i]) for i in range(self.num_class)]
 
     def add(self, predict, target, batch_size, batch_index):
+        '''
+        :param predict: batch_size * 6（numpy）
+        :param target: :batch_size * 6(numpy)
+        :param batch_size:
+        :param batch_index:第几个batch，从0开始
+        :return:
+        '''
         for i in range(self.num_class):
             self.matrix[i].add(list(map(round, predict[:, i].tolist())), list(map(int, target[:, i].tolist())), batch_size, batch_index)
 
