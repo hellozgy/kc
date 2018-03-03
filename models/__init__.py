@@ -8,3 +8,4 @@ from .LNGRUText import LNGRUText
 from .rnn import LNGRU, LNGRUCell
 from .TimeDistributed import TimeDistributed
 from .Attention import Attention
+from .fconv import FConvModel

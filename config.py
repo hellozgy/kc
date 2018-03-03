@@ -7,7 +7,7 @@ class Config():
     seed = 1
 
     max_len = 200
-    embeds_size = 300
+    embeds_size = 100
     hidden_size = 128
     dropout = 0.5
     log_iter = 100
@@ -21,11 +21,12 @@ class Config():
     num_classes = 6
     save_model = True
     docs_file = 'docs_bpe.npz'
-    embeds_path = './input/vec_fasttext_bpe_300.txt'
+    embeds_path = './input/vec_fasttext_bpe_100.txt'
     split_sentence = False
     subset = 'commit'
     index = 7
     eval_every = 2000
+    models=None
 
 
     filters = [2, 3, 4, 5]
@@ -37,7 +38,7 @@ class Config():
     linear_hidden_size = 512
     weight_decay = 0
     dropout_data = 0.3
-    res_file = 'res'
+    res_file = 'res.csv'
     bpe=True
 
     def parse(self, args):

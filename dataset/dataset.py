@@ -102,15 +102,19 @@ class KCDataset10fold(data.Dataset):
         self.dropout_data = dropout_data
 
         em = word2vec.load(vec_name)
-        if not os.path.exists(vec_name[:-4]):
-            vec = em.vectors
-            pad_unk = np.zeros((2, vec.shape[1]))
-            vec = np.row_stack((pad_unk, vec))
-            np.savez_compressed(vec_name[:-4]+'.npz', vec=vec)
         word2id = {k: v + 2 for k, v in em.vocab_hash.items()}
         word2id[PAD_WORD] = PAD_INDEX
         word2id[UNK_WORD] = UNK_INDEX
         self.vocab_size = len(word2id)
+        if not os.path.exists(vec_name[:-4]):
+            vec = em.vectors
+            pad_unk = np.zeros((2, vec.shape[1]))
+            vec = np.row_stack((pad_unk, vec))
+
+            category = [['toxic'], ['severe','toxic'],['obscene'],['threat'],['insult'],['identity','hate']]
+            category = np.asarray([[word2id.get(cc) for cc in c] for c in category])
+            np.savez_compressed(vec_name[:-4]+'.npz', vec=vec, category=category)
+
 
         bw = get_badword()
         bw = set([word2id[w] for w in bw if w in word2id])

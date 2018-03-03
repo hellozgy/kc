@@ -58,9 +58,11 @@ def train(**kwargs):
         shuffle=True, num_workers=1, drop_last=False)
     loss_function = nn.BCELoss(size_average=True)
     fw = open('./checkpoints/{}/log.txt'.format(opt.id), 'a', encoding='utf-8')
+    fw.write(str(model))
     print('train...')
     print(str(model))
     batch = 0
+    print(opt.id)
     for epoch in range(1, opt.epochs+1):
         loss = 0
         batch += 1
@@ -152,20 +154,22 @@ def test(**kwargs):
     # test_data = KCDatasetTest('./tenfold/train_data_test_7.csv', './tenfold/train_label_test_7.csv',
     #                           max_len=opt.max_len, vec_name=opt.embeds_path)
     opt.vocab_size = test_data.vocab_size
-    restore_file = './checkpoints/{}/{}'.format(opt.id,
-                                                'checkpoint_best' if opt.restore_file is None else opt.restore_file)
-    print('restore parameters from {}'.format(restore_file))
-    model_file = torch.load(restore_file)
-    opt.parseopt(model_file['opt'])
-    model = getattr(models, opt.model)(opt)
-    model.load_state_dict(model_file['model'], strict=False)
-    model.cuda(opt.ngpu)
+    model_list = []
+    for model in opt.models.split(','):
+        restore_file = './checkpoints/{}'.format(model)
+        print('restore parameters from {}'.format(restore_file))
+        model_file = torch.load(restore_file)
+        opt.parseopt(model_file['opt'])
+        model = getattr(models, opt.model)(opt)
+        model.load_state_dict(model_file['model'], strict=False)
+        model.cuda(opt.ngpu)
+        model_list.append(model)
 
     dataloader= data.DataLoader(
         dataset=test_data, batch_size=opt.batch_size,
         shuffle=False, num_workers=1, drop_last=False)
 
-    res_file = './checkpoints/{}/{}.csv'.format(opt.id, opt.res_file)
+    res_file = './checkpoints/{}'.format(opt.res_file)
     print(res_file)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')
@@ -175,12 +179,16 @@ def test(**kwargs):
     confusion_matrix = MulLabelConfusionMeter(num_class=6, simple=True)
     loss = 0
     step = 0
-    model.eval()
+    for model in model_list:
+        model.eval()
     for content, labels, ids in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         labels = Variable(labels, volatile=True).float().cuda(opt.ngpu)
-        predicts = model(content)
+        predicts = 0
+        for model in model_list:
+            predicts = predicts + model(content, None)
+        predicts = predicts/len(model_list)
 
         batch_loss = loss_function(predicts, labels)
         loss += batch_loss.data[0]
@@ -192,14 +200,14 @@ def test(**kwargs):
         fw.write(res)
         fw.flush()
     fw.close()
-    print(str(model))
-    print(str(confusion_matrix))
-
-    with open('./checkpoints/{}/log_test.txt'.format(opt.id), 'a', encoding='utf-8') as flog:
-        flog.write(str(model))
-        print('loss:{:,.6f}\n'.format(loss/step))
-        flog.write('---------------------loss:{:,.5f}---------------------\n'.format(loss/step))
-        flog.write(str(confusion_matrix)+'\n')
+    # print(str(model))
+    # print(str(confusion_matrix))
+    #
+    # with open('./checkpoints/{}/log_test.txt'.format(opt.id), 'a', encoding='utf-8') as flog:
+    #     flog.write(str(model))
+    #     print('loss:{:,.6f}\n'.format(loss/step))
+    #     flog.write('---------------------loss:{:,.5f}---------------------\n'.format(loss/step))
+    #     flog.write(str(confusion_matrix)+'\n')
 
 if __name__ == '__main__':  
     import fire
