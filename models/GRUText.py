@@ -42,26 +42,16 @@ class LNGRUText(BasicModule):
             nn.Linear(self.linear_hidden_size, self.num_classes),
             nn.Sigmoid()
         )
-        # self.fc_bw = nn.Sequential(
-        #     nn.Linear(self.embeds_size*10, 2000),
-        #     nn.BatchNorm1d(2000),
-        #     Swish(),
-        #     nn.Linear(2000, 200),
-        #     # nn.Sigmoid()
-        # )
 
-    def forward(self, content, bw):
-        batch_size = content.size(0)
+    def forward(self, content):
         seq_len = content.size(1)
         content = self.embeds(content).permute(1, 0, 2)
-        # bw = self.embeds(bw).view(batch_size, -1)
-        # bw = self.fc_bw(bw)
 
         hiddens = []
         input = content
         # pre = 0
         for layer, gru in enumerate(self.gru):
-            input = self.ln[layer](input)
+            # input = self.ln[layer](input)
             output, hn = gru(input)
             hiddens.append(torch.cat([hn[0],hn[1]], 1))
             input = output + (input if layer>0 else 0)
@@ -69,7 +59,5 @@ class LNGRUText(BasicModule):
         hiddens = torch.cat(hiddens, 1)
         output = F.max_pool1d(output.permute(1,2,0), seq_len).squeeze(2)
         output = torch.cat([hiddens, output], 1)
-
-        # output = torch.cat([output, bw], 1)
         predicts = self.fc(output)
         return predicts

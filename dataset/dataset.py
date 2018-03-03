@@ -73,7 +73,7 @@ class KCDataset(data.Dataset):
         return self.datas.shape[0]
 
 class KCDataset10fold(data.Dataset):
-    def __init__(self, index=8, max_len=100, vec_name='../input/vec_fasttext_bpe_300.txt',training=True, dropout_data=0.3,
+    def __init__(self, index=8, max_len=100, vec_name='../input/vec_fasttext_bpe_300.txt',training=True, dropout_data=0.3, bpe=True,
                  split_sentence=False, max_sentence=10, max_word_persentence=30):
         '''
         :param file:the file of all data
@@ -91,6 +91,13 @@ class KCDataset10fold(data.Dataset):
                     res.append(line.strip())
             return res
 
+        def get_badword():
+            bw = set()
+            with open('./input/badword.txt', 'r', encoding='utf-8') as f:
+                for line in f:
+                    bw.add(line.strip())
+            return bw
+
         self.training = training
         self.dropout_data = dropout_data
 
@@ -105,26 +112,45 @@ class KCDataset10fold(data.Dataset):
         word2id[UNK_WORD] = UNK_INDEX
         self.vocab_size = len(word2id)
 
-        self.train = read_data(os.path.join(base_dir, '../tenfold/train_data_train_{}.csv'.format(index)))
+        bw = get_badword()
+        bw = set([word2id[w] for w in bw if w in word2id])
+
+        self.train = read_data(os.path.join(base_dir, '../tenfold/train_data{}_train_{}.csv'.format(('_bpe' if bpe else ''), index)))
         self.train_label = read_data(os.path.join(base_dir, '../tenfold/train_label_train_{}.csv'.format(index)))
         assert len(self.train)==len(self.train_label)
         self.train = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.train]
         self.train = [line+[PAD_INDEX]*(max_len-len(line)) for line in self.train]
-        self.train = np.asarray(self.train)
         self.train_label = [[int(t) for t in line.split(',')[1:]] for line in self.train_label]
+        self.train_bw = [[w for w in line if w in bw][:10] for line in self.train]
+        self.train_bw = [line+[PAD_INDEX]*(10-len(line)) for line in self.train_bw]
+        # n = len(self.train)
+        # for i in range(n):
+        #     d = self.train[i]
+        #     lab = self.train_label[i]
+            # if sum(lab)>0:
+            #     ipdb.set_trace()
+            #     self.train.extend([d for _ in range(10)])
+            #     self.train_label.extend([lab for _ in range(10)])
+
+        self.train = np.asarray(self.train)
+        self.train_bw = np.asarray(self.train_bw)
         self.train_label = np.asarray(self.train_label)
 
-        self.val = read_data(os.path.join(base_dir, '../tenfold/train_data_test_{}.csv'.format(index)))
+        self.val = read_data(os.path.join(base_dir, '../tenfold/train_data{}_test_{}.csv'.format(('_bpe' if bpe else ''),index)))
         self.val_label = read_data(os.path.join(base_dir, '../tenfold/train_label_test_{}.csv'.format(index)))
         assert len(self.val) == len(self.val_label)
         self.val = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.val]
         self.val = [line + [PAD_INDEX] * (max_len - len(line)) for line in self.val]
-        self.val = np.asarray(self.val)
         self.val_label = [[int(t) for t in line.split(',')[1:]] for line in self.val_label]
+        self.val_bw = [[w for w in line if w in bw][:10] for line in self.val]
+        self.val_bw = [line + [PAD_INDEX] * (10 - len(line)) for line in self.val_bw]
+        self.val = np.asarray(self.val)
+        self.val_bw = np.asarray(self.val_bw)
         self.val_label = np.asarray(self.val_label)
 
 
         self.data = self.train if self.training else self.val
+        self.data_bw = self.train_bw if self.training else self.val_bw
         self.label = self.train_label if self.training else self.val_label
 
     def set_train(self, train=True):
@@ -132,9 +158,11 @@ class KCDataset10fold(data.Dataset):
         if train:
             self.data = self.train
             self.label = self.train_label
+            self.data_bw = self.train_bw
         else:
             self.data = self.val
             self.label = self.val_label
+            self.data_bw = self.val_bw
 
     def shuffle(self, d):
         d = d.tolist()
@@ -149,14 +177,14 @@ class KCDataset10fold(data.Dataset):
         return d
 
     def __getitem__(self, index):
-        data, label = self.data[index], self.label[index]
+        data, label, bw = self.data[index], self.label[index], self.data_bw[index]
 
         if self.training:
             if np.random.random() > 0.5:
                 data = self.dropout(data, p=self.dropout_data)
             else:
                 data = self.shuffle(data)
-        return data, label
+        return data, label, bw
 
     def __len__(self):
         return self.data.shape[0]
@@ -194,12 +222,11 @@ class KCDatasetTest(data.Dataset):
 
         self.data = read_data(data_file)
         self.data_label = read_data(label_file)
-        assert len(self.train)==len(self.train_label)
         self.data = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.data]
         self.data = [line+[PAD_INDEX]*(max_len-len(line)) for line in self.data]
         self.data = np.asarray(self.data)
-        self.data_id = [[line.split(',')[0]] for line in self.data_label]
-        self.data_label = [[int(t) for t in line.split(',')[1:]] if len(line.split(','))==7 else [0]*6 for line in self.data_label]
+        self.data_id = [line.split(',')[0] for line in self.data_label]
+        self.data_label = [[int(t) for t in line.split(',')[1:]] if len(line.split(','))==7 else [1]*6 for line in self.data_label]
         self.data_label = np.asarray(self.data_label)
 
     def __getitem__(self, index):

@@ -15,7 +15,6 @@ class LayerNorm(nn.Module):
 
     def forward(self, x):
         mean = x.mean(-1, keepdim=True)
-        # std = 1 / (((x - mean).pow(2).mean(-1, keepdim=True) + self.eps).sqrt())
         std = 1/torch.std(x)
         if self.affine:
             return (x - mean) * std * self.gamma + self.beta

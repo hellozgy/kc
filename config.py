@@ -1,40 +1,44 @@
 import os
 
 class Config():
-    ngpu = -1  # 指定gpu
+    ngpu = -1
     model = 'BasicModule'
     id = None
+    seed = 1
 
-    max_len = 100
+    max_len = 200
     embeds_size = 300
-    hidden_size = 256
+    hidden_size = 128
     dropout = 0.5
     log_iter = 100
     batch_size = 64
     epochs = 30
     lr = 1e-3
-    limit_lr = 1e-6
-    restore = True
+    limit_lr = 1e-5
+    restore = False
     restore_file = None
     vocab_size = -1
     num_classes = 6
-    save_model = False
+    save_model = True
     docs_file = 'docs_bpe.npz'
-    embeds_path = './input/vec_glove_bpe_300.txt'
+    embeds_path = './input/vec_fasttext_bpe_300.txt'
     split_sentence = False
-    subset = 'commit'  # test函数的数据
+    subset = 'commit'
     index = 7
+    eval_every = 2000
 
-    # CNNText 参数
+
     filters = [2, 3, 4, 5]
     filter_nums = [128, 128, 256, 256]
     model_type = 'multichannel'
-    tune = False # 使用测试集微调
+    tune = False
     num_layers = 1
-    kmax_pooling = 3
-    linear_hidden_size = 2000
-    weight_decay = 2e-5
-    dropout_data = 0.7
+    kmax_pooling = 1
+    linear_hidden_size = 512
+    weight_decay = 0
+    dropout_data = 0.3
+    res_file = 'res'
+    bpe=True
 
     def parse(self, args):
         for k, v in args.items():
@@ -49,7 +53,7 @@ class Config():
 
     def parseopt(self, opt):
         keys = [k for k in dir(opt) if not k.startswith('_') and not k.startswith('parse')
-                and not k.startswith('show') and k not in set(['ngpu', 'id', 'restore_file'])]
+                and not k.startswith('show') and k not in set(['ngpu', 'id', 'restore_file', 'res_file'])]
         for key in keys:
             setattr(self, key, getattr(opt, key))
 
