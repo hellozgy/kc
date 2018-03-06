@@ -48,7 +48,7 @@ class FConvModel(BasicModule):
 class FConvEncoder(nn.Module):
     """Convolutional encoder"""
     def __init__(self, opt, embeds, embed_dim=512,
-                 convolutions=((512, 3),) * 20, dropout=0.1):
+                 convolutions=((128, 3),) * 4 + ((256, 1),) + ((512 , 1),), dropout=0.1):
         super(FConvEncoder, self).__init__()
         embed_dim=opt.embeds_size
         self.dropout = dropout
@@ -72,10 +72,10 @@ class FConvEncoder(nn.Module):
         self.fc2 = Linear(in_channels, embed_dim)
 
         self.fc = nn.Sequential(
-            nn.Linear(embed_dim, 512),
-            nn.BatchNorm1d(512),
+            nn.Linear(embed_dim, 100),
+            nn.BatchNorm1d(100),
             Swish(),
-            nn.Linear(512, 6),
+            nn.Linear(100, 6),
             nn.Sigmoid()
         )
 

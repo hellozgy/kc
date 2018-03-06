@@ -43,61 +43,49 @@ class LNGRUCell(nn.Module):
         return hx
 
 class LNGRU(nn.Module):
-    '''
-    使用参见标准GRU
-    '''
-    def __init__(self, GRUCell, input_size, hidden_size, num_layers=1, bidirectional=False, bias=True, dropout=0):
+    def __init__(self, input_size, hidden_size, bidirectional=False, bias=True, dropout=0):
         super(LNGRU, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
         self.bidirectional = bidirectional
-        self.ff_gru = nn.ModuleList([GRUCell(input_size, hidden_size, bias)] +
-                                    [GRUCell(hidden_size, hidden_size, bias) for _ in range(num_layers-1)])
+        self.ff_gru = LNGRUCell(input_size, hidden_size, bias)
         self.back_gru = None
         if bidirectional:
-            self.back_gru = nn.ModuleList([GRUCell(input_size, hidden_size, bias)] +
-                                          [GRUCell(hidden_size, hidden_size, bias) for _ in range(num_layers-1)])
+            self.back_gru = LNGRUCell(input_size, hidden_size, bias)
         self.dropout = dropout
 
-    def forward(self, input, h0=None):
+    def forward(self, input, h0):
         assert input.dim() == 3, input.size()
-        if h0 is None:
-            h0 = Variable(input.data.new(self.num_layers * (2 if self.bidirectional else 1),
-                                input.size(1), self.hidden_size).zero_().float())
         assert h0.dim() == 3
         assert input.size(2) == self.input_size and h0.size(2) == self.hidden_size, 'input:{},h0:{}'.format(str(input.size()), str(h0.size()))
         assert input.size(1) == h0.size(1)
-        assert h0.size(0) == self.num_layers * (2 if self.bidirectional else 1)
-        hiddens = []
-        input_ff = [input[i] for i in range(input.size(0))]
-        input_back = [input[i] for i in range(input.size(0))]
+        assert h0.size(0) == 2 if self.bidirectional else 1
         seq_len = input.size(0)
-        for layer in range(self.num_layers):
-            hidden = h0[layer*(2 if self.bidirectional else 1),:,:]
-            output_ff = []
-            for timestep in range(seq_len):
-                x = input_ff[timestep]
-                hidden = self.ff_gru[layer](x, hidden)
-                output_ff.append(F.dropout(hidden, self.dropout, self.training))
-            input_ff = output_ff
+        hiddens = []
+        input_ff = [input[i] for i in range(seq_len)]
+        input_back = input_ff
+        hidden = h0[0] if self.bidirectional else h0
+        output_ff = []
+        for timestep in range(seq_len):
+            x = input_ff[timestep]
+            hidden = self.ff_gru(x, hidden)
+            output_ff.append(F.dropout(hidden, self.dropout, self.training))
+        hiddens.append(hidden)
+
+        if self.bidirectional:
+            hidden = h0[1]
+            output_back = []
+            for timestep in range(seq_len-1, -1, -1):
+                x = input_back[timestep]
+                hidden = self.back_gru(x, hidden)
+                output_back.append(F.dropout(hidden, self.dropout, self.training))
+            output_back.reverse()
             hiddens.append(hidden)
 
-            if self.bidirectional:
-                hidden = h0[1 + layer * (2 if self.bidirectional else 1), :, :]
-                output_back = []
-                for timestep in range(seq_len-1, -1, -1):
-                    x = input_back[timestep]
-                    hidden = self.back_gru[layer](x, hidden)
-                    output_back.append(F.dropout(hidden, self.dropout, self.training))
-                output_back.reverse()
-                input_back = output_back
-                hiddens.append(hidden)
-
         hiddens = torch.stack(hiddens)
-        output = torch.stack(input_ff)
+        output = torch.stack(output_ff)
         if self.bidirectional:
-            output = torch.cat([output, torch.stack(input_back)], 2)
+            output = torch.cat([output, torch.stack(output_back)], 2)
         return output, hiddens
 
 class  cGRUCell(nn.Module):

@@ -61,6 +61,10 @@ def build_glove_vec(glove, model, output_vec):
                 words.remove(line[0])
 
     vectors = np.zeros((len(words_list), fmodel.get_dimension()), dtype=float)
+    with open('../outdata/outvocab.txt', 'w', encoding='utf-8') as ff:
+        for w in words:
+            ff.write(w+'\n')
+
     for i in range(len(words_list)):
         wv = fmodel.get_word_vector(words_list[i])
         wv = wv / np.linalg.norm(wv)

@@ -9,3 +9,4 @@ from .rnn import LNGRU, LNGRUCell
 from .TimeDistributed import TimeDistributed
 from .Attention import Attention
 from .fconv import FConvModel
+from .LNGRUText2 import LNGRUText2

@@ -1,22 +1,37 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
+import torch.nn.functional as F
+import ipdb
 
-class BCELossWeight(nn.Module):
-    def __init__(self, ngpu, weight=[0.095844, 0.009996, 0.052948, 0.002996, 0.049364, 0.008805]):
-        super(BCELossWeight, self).__init__()
-        self.ngpu = ngpu
-        weight = list(map(lambda x: (1-x)/x, weight))
-        self.weight = Variable(torch.FloatTensor(weight).cuda(ngpu))
+class NLLLoss6(nn.Module):
+    def __init__(self,  weight=[[1,1] for _ in range(6)], size_average=True):
+        super(NLLLoss6, self).__init__()
+        self.weight = torch.FloatTensor(weight).cuda()
+        self.losses = [nn.NLLLoss(self.weight[i], size_average=True) for i in range(6)]
 
-    def reset(self):
-        self.weight = Variable(torch.FloatTensor([1, 1, 1, 1, 1, 1]).cuda(self.ngpu))
+    def update_weight(self, weight):
+        self.weight = torch.FloatTensor(weight).cuda()
+        self.losses = [nn.NLLLoss(self.weight[i], size_average=True) for i in range(6)]
 
-    def forward(self, predict, target):
+    def forward(self, predicts, targets):
         '''
-        :param predict: (batch, 6)
-        :param target: (batch, 6)
+        :param predicts: (batch, 6)
+        :param targets: (batch, 6)
         :return:
         '''
-        loss = -torch.mean(target*torch.log(predict) * self.weight + (1-target)*torch.log(1-predict))
+        loss = 0
+        predicts = F.sigmoid(predicts)
+        for i in range(6):
+            predict = torch.cat([1-predicts[:, i:i+1], predicts[:, i:i+1]], 1)
+            predict = torch.log(predict)
+            target = targets[:, i].long()
+            loss = loss + self.losses[i](predict, target)
         return loss
+
+if __name__=='__main__':
+    torch.cuda.set_device(3)
+    predict = Variable(torch.randn(10, 6)).cuda()
+    target = Variable(torch.ones(10,6)).cuda()
+    loss = NLLLoss6()
+    print(loss(predict, target))
