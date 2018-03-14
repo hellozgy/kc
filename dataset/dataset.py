@@ -97,14 +97,6 @@ class KCDataset10fold(data.Dataset):
                     bw.add(line.strip())
             return bw
 
-        def get_oov():
-            oov = set()
-            with open('./outdata/outvocab.txt', 'r', encoding='utf-8') as f:
-                for line in f:
-                    oov.add(line.strip())
-            return oov
-
-        oov = get_oov()
         self.training = training
         self.dropout_data = dropout_data
         self.max_len = max_len
@@ -130,7 +122,7 @@ class KCDataset10fold(data.Dataset):
         self.train = read_data(os.path.join(base_dir, '../tenfold/train_data{}_train_{}.csv'.format(('_bpe' if bpe else ''), index)))
         self.train_label = read_data(os.path.join(base_dir, '../tenfold/train_label_train_{}.csv'.format(index)))
         assert len(self.train)==len(self.train_label)
-        self.train = [[word2id.get(word, UNK_INDEX) if word not in oov else UNK_INDEX for word in line.split()[:max_len]] for line in self.train]
+        self.train = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.train]
         self.train_len = np.asarray([[len(line)] for line in self.train])
         self.train = [line+[PAD_INDEX]*(max_len-len(line)) for line in self.train]
         self.train_label = [[int(t) for t in line.split(',')[1:]] for line in self.train_label]
@@ -152,7 +144,7 @@ class KCDataset10fold(data.Dataset):
         self.val = read_data(os.path.join(base_dir, '../tenfold/train_data{}_test_{}.csv'.format(('_bpe' if bpe else ''),index)))
         self.val_label = read_data(os.path.join(base_dir, '../tenfold/train_label_test_{}.csv'.format(index)))
         assert len(self.val) == len(self.val_label)
-        self.val = [[word2id.get(word, UNK_INDEX) if word not in oov else UNK_INDEX for word in line.split()[:max_len]] for line in self.val]
+        self.val = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.val]
         self.val_len = np.asarray([[len(line)] for line in self.val])
         self.val = [line + [PAD_INDEX] * (max_len - len(line)) for line in self.val]
         self.val_label = [[int(t) for t in line.split(',')[1:]] for line in self.val_label]

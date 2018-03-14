@@ -3,6 +3,8 @@ import torch
 import torch.nn.functional as F
 
 class Swish(nn.Module):
+    def __init__(self):
+        super(Swish, self).__init__()
 
     def forward(self, input):
         return input * torch.sigmoid(input)

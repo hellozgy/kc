@@ -2,19 +2,19 @@ import os
 
 class Config():
     ngpu = -1
-    model = 'BasicModule'
+    model = 'LNGRUText'
     id = None
     seed = 1
 
     max_len = 200
     embeds_size = 100
     hidden_size = 128
-    dropout = 0.5
+    dropout = 0.2
     log_iter = 100
     batch_size = 64
     epochs = 30
     lr = 1e-3
-    limit_lr = 1e-5
+    limit_lr = 1e-6
     restore = False
     restore_file = None
     vocab_size = -1
@@ -36,7 +36,7 @@ class Config():
     num_layers = 1
     kmax_pooling = 1
     linear_hidden_size = 512
-    weight_decay = 0
+    weight_decay = 1e-5
     dropout_data = 0.3
     res_file = 'res.csv'
     bpe=True

@@ -66,7 +66,7 @@ def train(**kwargs):
     for epoch in range(1, opt.epochs+1):
         loss = 0
         batch += 1
-        if opt.lr < 1e-5:
+        if opt.lr < opt.limit_lr:
             break
         for content, label, bw, lengths in dataloader_train:
             content = Variable(content).long().cuda()
@@ -96,14 +96,16 @@ def train(**kwargs):
 
                 if epoch_loss > min_loss:
                     opt.lr = opt.lr * 0.5
-                    lr2=0
+                    lr2 = min(1e-5, opt.lr)
                     model.load_state_dict(torch.load('./checkpoints/{}/checkpoint_best'.format(opt.id))['model'])
-                    optimizer = model.get_optimizer(opt.lr if not opt.tune else 1e-5, lr2=lr2 if not opt.tune else 1e-5, weight_decay=opt.weight_decay)
+                    optimizer = model.get_optimizer(lr=opt.lr,
+                                                    lr2=lr2,
+                                                    weight_decay=opt.weight_decay)
 
     fw.close()
 
 def eval(dataset, opt, model, min_loss, checkpoint_id):
-    print('eval...')
+    # print('eval...')
     dataset.set_train(train=False)
     dataloader = data.DataLoader(
         dataset=dataset, batch_size=opt.batch_size,
@@ -115,7 +117,6 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     confusion_matrix = MulLabelConfusionMeter(num_class=6, simple=True)
     for content, label, bw, lengths in dataloader:
         step += 1
-        seq_len = torch.max(lengths)
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         bw = Variable(bw, volatile=True).long().cuda()
         label = Variable(label, volatile=True).float().cuda(opt.ngpu)
@@ -126,7 +127,7 @@ def eval(dataset, opt, model, min_loss, checkpoint_id):
     model.train()
     loss = loss / step
 
-    print(str(confusion_matrix))
+    # print(str(confusion_matrix))
 
     if opt.save_model and loss < min_loss:
         torch.save({'model': model.state_dict(), 'checkpoint_id': checkpoint_id, 'loss': loss, 'opt': opt},
