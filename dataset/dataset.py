@@ -123,7 +123,7 @@ class KCDataset10fold(data.Dataset):
         self.train_label = read_data(os.path.join(base_dir, '../tenfold/train_label_train_{}.csv'.format(index)))
         assert len(self.train)==len(self.train_label)
         self.train = [[word2id.get(word, UNK_INDEX) for word in line.split()[:max_len]] for line in self.train]
-        self.train_len = np.asarray([[len(line)] for line in self.train])
+        self.train_len = [[len(line)] for line in self.train]
         self.train = [line+[PAD_INDEX]*(max_len-len(line)) for line in self.train]
         self.train_label = [[int(t) for t in line.split(',')[1:]] for line in self.train_label]
         self.train_bw = [[w for w in line if w in bw][:10] for line in self.train]
@@ -132,14 +132,18 @@ class KCDataset10fold(data.Dataset):
         # for i in range(n):
         #     d = self.train[i]
         #     lab = self.train_label[i]
-            # if sum(lab)>0:
-            #     ipdb.set_trace()
-            #     self.train.extend([d for _ in range(10)])
-            #     self.train_label.extend([lab for _ in range(10)])
+        #     _bw = self.train_bw[i]
+        #     length = self.train_len[i]
+        #     if sum(lab)>0:
+        #         self.train.extend([d for _ in range(1)])
+        #         self.train_label.extend([lab for _ in range(1)])
+        #         self.train_bw.extend([_bw for _ in range(1)])
+        #         self.train_len.extend(length for _ in range(1))
 
         self.train = np.asarray(self.train)
         self.train_bw = np.asarray(self.train_bw)
         self.train_label = np.asarray(self.train_label)
+        self.train_len = np.asarray(self.train_len)
 
         self.val = read_data(os.path.join(base_dir, '../tenfold/train_data{}_test_{}.csv'.format(('_bpe' if bpe else ''),index)))
         self.val_label = read_data(os.path.join(base_dir, '../tenfold/train_label_test_{}.csv'.format(index)))

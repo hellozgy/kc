@@ -13,6 +13,7 @@ import datetime
 import numpy as np
 import random
 from meter import MulLabelConfusionMeter
+import torch.nn.functional as F
 from loss_module import NLLLoss6
 import ipdb
 
@@ -169,13 +170,13 @@ def test(**kwargs):
     step = 0
     for model in model_list:
         model.eval()
-    for content, labels, ids, lengths in dataloader:
+    for content, labels, ids in dataloader:
         step += 1
         content = Variable(content, volatile=True).long().cuda(opt.ngpu)
         labels = Variable(labels, volatile=True).float().cuda(opt.ngpu)
         predicts = 0
         for model in model_list:
-            predicts = predicts + model(content, None)
+            predicts = predicts + F.sigmoid(model(content, None))
         predicts = predicts/len(model_list)
 
         batch_loss = loss_function(predicts, labels)

@@ -21,6 +21,7 @@ class RCNNText(BasicModule):
         self.ln = LayerNorm(self.embeds_size)  # better than bn
         self.h0 = self.init_hidden((2, 1, opt.hidden_size))
         self.gru = self.GRU(input_size=self.embeds_size, hidden_size=self.hidden_size, bidirectional=True)
+        self.conv = self.Conv1d(in_channels=2*self.hidden_size, out_channels=self.hidden_size, kernel_size=2)
 
 
         self.fc = nn.Sequential(
@@ -43,7 +44,11 @@ class RCNNText(BasicModule):
         input = self.ln(content)
         output, hn = self.gru(input, self.h0.repeat(1, batch_size, 1))
         hiddens = hn.transpose(0, 1).contiguous().view(batch_size, -1)
-        output = F.max_pool1d(output.permute(1,2,0), seq_len).squeeze(2)
-        output = torch.cat([hiddens, output], 1)
+        # output = F.max_pool1d(output.permute(1,2,0), seq_len).squeeze(2)
+        # output = torch.cat([hiddens, output], 1)
+        conv_out = self.conv(output.permute(1, 2, 0))
+        out1 = F.max_pool1d(conv_out, conv_out.size(2)).squeeze(2)
+        out2 = F.avg_pool1d(conv_out, conv_out.size(2)).squeeze(2)
+        output = torch.cat([hiddens, out1, out2], 1)
         predicts = self.fc(output)
         return predicts
