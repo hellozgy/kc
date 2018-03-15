@@ -1,16 +1,18 @@
 #!/bin/bash
-model=FConvModel
 
-python main.py train --ngpu=0 --model=$model --id=$model"_seg1" --index=1 > logs/$model"_seg1" 2>&1 &
-python main.py train --ngpu=1 --model=$model --id=$model"_seg2" --index=2 > logs/$model"_seg2" 2>&1 &
-python main.py train --ngpu=2 --model=$model --id=$model"_seg3" --index=3 > logs/$model"_seg3" 2>&1 &
-python main.py train --ngpu=0 --model=$model --id=$model"_seg4" --index=4 > logs/$model"_seg4" 2>&1 &
-python main.py train --ngpu=1 --model=$model --id=$model"_seg5" --index=5 > logs/$model"_seg5" 2>&1 &
-wait
-python main.py train --ngpu=9 --model=$model --id=$model"_seg6" --index=6 > logs/$model"_seg6" 2>&1 &
-python main.py train --ngpu=8 --model=$model --id=$model"_seg7" --index=7 > logs/$model"_seg7" 2>&1 &
-python main.py train --ngpu=7 --model=$model --id=$model"_seg8" --index=8 > logs/$model"_seg8" 2>&1 &
-python main.py train --ngpu=6 --model=$model --id=$model"_seg9" --index=9 > logs/$model"_seg9" 2>&1 &
-python main.py train --ngpu=5 --model=$model --id=$model"_seg10" --index=10 > logs/$model"_seg10" 2>&1 &
+model=LNGRUText
+echo "model:"$model
+python main.py train --ngpu=2 --model=$model --id=$model"_seg1_layer4" --index=1 --seed=1 --num-layers=4 &
+#python main.py train --ngpu=6 --model=$model --id=$model"_seg2_layer4" --index=2 --seed=1 --num-layers=4 &
+python main.py train --ngpu=3 --model=$model --id=$model"_seg3_layer4" --index=3 --seed=3 --num-layers=4 &
+#wait
+#python main.py train --ngpu=4 --model=$model --id=$model"_seg4_layer4" --index=4 --seed=4 --num-layers=4 &
+#python main.py train --ngpu=6 --model=$model --id=$model"_seg5_layer4" --index=5 --seed=5 --num-layers=4 &
+#python main.py train --ngpu=8 --model=$model --id=$model"_seg6_layer4" --index=6 --seed=6 --num-layers=4 &
+#wait
+#python main.py train --ngpu=5 --model=$model --id=$model"_seg7_layer4" --index=7 --seed=1 --num-layers=4 &
+#python main.py train --ngpu=4 --model=$model --id=$model"_seg8_layer4" --index=8 --seed=8 --num-layers=4  &
+python main.py train --ngpu=4 --model=$model --id=$model"_seg9_layer4" --index=9 --seed=9 --num-layers=4  &
+#python main.py train --ngpu=8 --model=$model --id=$model"_seg10_layer4" --index=10 --seed=10 --num-layers=4  &
 wait
 echo finish

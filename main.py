@@ -59,6 +59,8 @@ def train(**kwargs):
     # loss_function = NLLLoss6(size_average=True)
     fw = open('./checkpoints/{}/log.txt'.format(opt.id), 'a', encoding='utf-8')
     fw.write(str(model))
+    fw.write(str(sum(p.numel() for p in list(model.parameters())))+'\n')
+    fw.write(opt.id+'\n')
     print('train...')
     print(str(model))
     print(sum(p.numel() for p in list(model.parameters())))
@@ -142,7 +144,7 @@ def test(**kwargs):
     assert opt.ngpu >= 0
     test_data = KCDatasetTest('./input/test_data_bpe.csv', './input/test_label.csv',
                               max_len=opt.max_len, vec_name=opt.embeds_path)
-    # test_data = KCDatasetTest('./tenfold/train_data_test_7.csv', './tenfold/train_label_test_7.csv',
+    # test_data = KCDatasetTest('./tenfold/train_data_bpe_test_10.csv', './tenfold/train_label_test_10.csv',
     #                           max_len=opt.max_len, vec_name=opt.embeds_path)
     opt.vocab_size = test_data.vocab_size
     model_list = []
@@ -164,7 +166,7 @@ def test(**kwargs):
     print(res_file)
     fw = open(res_file, 'w', encoding='utf-8')
     fw.write('id,toxic,severe_toxic,obscene,threat,insult,identity_hate\n')
-    loss_function = nn.BCEWithLogitsLoss(size_average=True)
+    loss_function = nn.BCELoss(size_average=True)
     confusion_matrix = MulLabelConfusionMeter(num_class=6, simple=True)
     loss = 0
     step = 0
@@ -189,6 +191,7 @@ def test(**kwargs):
         fw.write(res)
         fw.flush()
     fw.close()
+    print('loss:{:,.6f}'.format(loss/step))
 
 if __name__ == '__main__':  
     import fire

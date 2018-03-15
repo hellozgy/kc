@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from dataset.Constants import PAD_INDEX
 from .layer_norm import LayerNorm
 from .activate import Swish
-from .func import swish
 import ipdb
 import torch.nn.utils.rnn as rnn_util
 

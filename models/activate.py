@@ -12,16 +12,6 @@ class Swish(nn.Module):
     def __repr__(self):
         return self.__class__.__name__ + ' ()'
 
-class GLU(nn.Module):
-    def __init__(self, dim):
-        super(GLU, self).__init__()
-        self.w = nn.Linear(dim, dim)
-        self.v = nn.Linear(dim, dim)
-
-    def forward(self, inputs):
-        output = self.w(inputs) * torch.sigmoid(self.v(inputs))
-        return output
-
 class Highway(nn.Module):
     def __init__(self, features, activate=F.tanh):
         super(Highway, self).__init__()
