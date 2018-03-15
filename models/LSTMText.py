@@ -21,7 +21,7 @@ class LSTMText(BasicModule):
         assert self.vocab_size > 0
         self.embeds_size = opt.embeds_size
         self.hidden_size = opt.hidden_size
-        self.dropout = opt.dropout
+        self.dropout = opt.dropout 
         self.num_classes = opt.num_classes
         self.kmax_pooling = opt.kmax_pooling
         self.linear_hidden_size = opt.linear_hidden_size
