@@ -2,12 +2,22 @@ import torch
 import torch.nn as nn
 from .activate import Swish
 from torch.autograd import Variable
+import math
 import ipdb
+
+
+def Conv1d(in_channels, out_channels, kernel_size, stride, padding):
+    """Weight-normalized Conv1d layer"""
+    m = nn.Conv1d(in_channels, out_channels, kernel_size, stride=stride, padding=padding)
+    std = math.sqrt(4 / (kernel_size * in_channels))
+    m.weight.data.normal_(mean=0, std=std)
+    m.bias.data.zero_()
+    return nn.utils.weight_norm(m, dim=2)
 
 class Conv(nn.Module):
     def __init__(self, dim, activate=Swish()):
         super(Conv, self).__init__()
-        self.conv = nn.Conv1d(in_channels=dim,
+        self.conv = Conv1d(in_channels=dim,
                               out_channels=dim,
                               kernel_size=3,
                               stride=1,

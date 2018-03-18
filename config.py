@@ -30,7 +30,7 @@ class Config():
 
 
     filters = [2, 3, 4, 5]
-    filter_nums = [128, 128, 256, 256]
+    filter_nums = [100, 100, 100, 100]
     model_type = 'multichannel'
     tune = False
     num_layers = 1
