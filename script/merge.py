@@ -23,6 +23,20 @@ def merge(path):
             scores = list(map(str, scores))
             fw.write('{},{}\n'.format(id, ','.join(scores)))
 
+def merge_data():
+    import pandas as pd
+    import ipdb
+    data = pd.read_csv('../input/train_data_bpe.csv', sep='^', names=['comment_text'])
+    label = pd.read_csv('../input/train_label.csv', sep=',', names=['id', 'toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate'])
+    label.insert(1, 'comment_text', data['comment_text'])
+    label.to_csv('../input/train_final.csv', index=False)
+
+    data = pd.read_csv('../input/test_data_bpe.csv', sep='^', names=['comment_text'])
+    label = pd.read_csv('../input/test_label.csv', sep=',', names=['id'])
+    label.insert(1, 'comment_text', data['comment_text'])
+    label.to_csv('../input/test_final.csv', index=False)
+
 
 if __name__=='__main__':
     merge('../input/merge')
+    # merge_data()

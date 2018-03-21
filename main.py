@@ -5,7 +5,7 @@ from torch.utils import data
 import torch.nn as nn
 from torch.autograd import Variable
 from config import opt
-from dataset import KCDataset, KCDataset10fold, KCDatasetTest
+from dataset import HANDataset, KCDataset10fold, KCDatasetTest
 import models
 import torch
 import shutil
@@ -29,7 +29,7 @@ def train(**kwargs):
     torch.cuda.set_device(opt.ngpu)
 
     print('load data...')
-    dataset = KCDataset10fold(index=opt.index, max_len=opt.max_len, vec_name=opt.embeds_path, training=True, dropout_data=0.3, bpe=opt.bpe)
+    dataset = HANDataset(index=opt.index, max_len=opt.max_len, vec_name=opt.embeds_path, training=True, dropout_data=0.3, bpe=opt.bpe)
     opt.vocab_size = dataset.vocab_size
     print('load model...')
     model = getattr(models, opt.model)(opt)

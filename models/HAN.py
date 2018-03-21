@@ -5,11 +5,13 @@ import numpy as np
 from dataset.Constants import PAD_INDEX
 import torch.nn.functional as F
 from torch.autograd import Variable
+from .layer_norm import LayerNorm
+from .activate import Swish
 import ipdb
 
 class HAN(BasicModule):
     def __init__(self, opt):
-        super(HAN, self).__init__(opt)
+        super(HAN, self).__init__()
         self.vocab_size = opt.vocab_size
         assert self.vocab_size > 0
         self.embeds_size = opt.embeds_size
@@ -18,7 +20,7 @@ class HAN(BasicModule):
         self.num_classes = opt.num_classes
         self.embeds = nn.Embedding(self.vocab_size, self.embeds_size, padding_idx=PAD_INDEX)
         if opt.embeds_path:
-            self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path)['vector']))
+            self.embeds.weight.data.copy_(torch.from_numpy(np.load(opt.embeds_path[:-4] + '.npz')['vec']))
 
         self.word_encoder = nn.LSTM(self.embeds_size, self.hidden_size, bidirectional=True, num_layers=opt.num_layers)
         self.sent_encoder = nn.LSTM(6*self.hidden_size, self.hidden_size, bidirectional=True, num_layers=opt.num_layers)
@@ -42,13 +44,12 @@ class HAN(BasicModule):
 
         self.fc = nn.Sequential(
             nn.Linear(6 * self.hidden_size, self.hidden_size),
-            nn.BatchNorm1d(self.hidden_size),
-            nn.Tanh(),
+            LayerNorm(self.hidden_size),
+            Swish(),
             nn.Linear(self.hidden_size, self.num_classes),
-            nn.Sigmoid()
         )
 
-    def forward(self, content, lengths):
+    def forward(self, content, bw):
         '''
         :param content: batch * max_sents * max_word
         :return:
@@ -59,7 +60,8 @@ class HAN(BasicModule):
         mask = torch.eq(words, PAD_INDEX).data
         mask_sent = torch.eq(torch.sum(mask, dim=1), max_word)
         mask = mask.float().masked_fill_(mask, -float('inf'))
-        mask = mask.index_fill_(0, mask_sent.float().topk(int(torch.sum(mask_sent.float())))[1], 0)
+        if int(torch.sum(mask_sent.float()))>0:
+            mask = mask.index_fill_(0, mask_sent.float().topk(int(torch.sum(mask_sent.float())))[1], 0)
         mask_sent = mask_sent.float().masked_fill_(mask_sent, -float('inf')).view(batch, max_sents)
 
         words_embeds = self.embeds(words).permute(1, 0, 2)
@@ -105,5 +107,3 @@ class HAN(BasicModule):
         attn = torch.bmm(At, ctx)[:,0,:]  # (batch_size,1, hidden_size)
         attn = F.tanh(attn_fc(torch.cat([attn, residual], 1)))
         return attn, At[:, 0, :]
-
-
