@@ -225,6 +225,7 @@ class KCDataset10fold(data.Dataset):
         return np.asarray(d)
 
     def dropout(self, d, p):
+        d = copy.deepcopy(d)
         len_ = len(d)
         index = np.random.choice(len_, int(len_ * p))
         d[index] = PAD_INDEX
